@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -20,12 +19,13 @@ import {
   X
 } from "lucide-react";
 import { saveReminder } from "@/lib/store";
-import { Reminder, Location } from "@/lib/types";
+import type { Reminder, Location } from "@/lib/types";
 import { suggestLocationTags } from "@/ai/flows/suggest-location-tags";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/components/location-provider";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 interface AutocompleteSuggestion {
   name: string;
@@ -44,7 +44,6 @@ export default function AddReminder() {
   const [tags, setTags] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   
-  // Location Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -56,7 +55,8 @@ export default function AddReminder() {
     address: "San Francisco, CA"
   });
 
-  // Debounced search for locations
+  const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-preview');
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (searchQuery.length < 3) {
@@ -85,7 +85,7 @@ export default function AddReminder() {
         setSuggestions(mappedSuggestions);
         setShowSuggestions(true);
       } catch (err) {
-        console.error("Location search failed", err);
+        // Error handling via silent fail for UX smoothness
       } finally {
         setIsSearching(false);
       }
@@ -118,7 +118,7 @@ export default function AddReminder() {
       const result = await suggestLocationTags({ reminderContent: title });
       setTags(result.tags);
     } catch (err) {
-      console.error(err);
+      // AI fail silently
     } finally {
       setIsAiLoading(false);
     }
@@ -166,7 +166,6 @@ export default function AddReminder() {
       </header>
 
       <div className="space-y-8">
-        {/* Title Input */}
         <div className="space-y-2">
           <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">What to remember?</Label>
           <div className="relative">
@@ -197,7 +196,6 @@ export default function AddReminder() {
           )}
         </div>
 
-        {/* Location Search Autocomplete */}
         <div className="space-y-2 relative">
           <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Location Target</Label>
           <div className="relative">
@@ -227,7 +225,6 @@ export default function AddReminder() {
             )}
           </div>
 
-          {/* Autocomplete Results */}
           {showSuggestions && suggestions.length > 0 && (
             <Card className="absolute z-50 w-full mt-1 bg-card/95 backdrop-blur-md border-border/50 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               <div className="max-h-[240px] overflow-y-auto">
@@ -251,7 +248,6 @@ export default function AddReminder() {
           )}
         </div>
 
-        {/* Radius Selector */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Radius Selector</Label>
@@ -272,16 +268,18 @@ export default function AddReminder() {
           </Card>
         </div>
 
-        {/* Map Preview Area */}
         <div className="space-y-4">
           <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Adaptive Geo-Point</Label>
           <div className="aspect-video bg-secondary/30 rounded-xl border border-border/50 relative overflow-hidden flex items-center justify-center">
-            <img 
-              src={`https://picsum.photos/seed/${location.latitude}/600/300`} 
-              alt="Location map" 
-              className="absolute inset-0 object-cover opacity-50 grayscale contrast-125"
-              data-ai-hint="city map"
-            />
+            {mapPlaceholder && (
+              <Image 
+                src={mapPlaceholder.imageUrl}
+                alt={mapPlaceholder.description}
+                fill
+                className="absolute inset-0 object-cover opacity-50 grayscale contrast-125"
+                data-ai-hint={mapPlaceholder.imageHint}
+              />
+            )}
             <div className="relative z-10 flex flex-col items-center gap-3 bg-card/90 backdrop-blur-md p-4 rounded-xl border border-border shadow-2xl max-w-[80%]">
               <div className="p-2 bg-primary/20 rounded-full">
                 <MapPin className="text-primary" size={24} />

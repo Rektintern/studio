@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Reminder } from "@/lib/types";
+import type { Reminder } from "@/lib/types";
 import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
@@ -51,10 +50,10 @@ export default function Home() {
         <div>
           <h1 className="text-3xl font-headline font-bold text-foreground indigo-glow">NearRemind</h1>
           <div className="flex flex-col gap-1 mt-1">
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
               <MapPin size={14} className={userLocation ? "text-accent" : "text-destructive"} />
               {locationLoading ? "Acquiring signal..." : userLocation ? "Tracking Active" : "Location Offline"}
-            </p>
+            </div>
             {locationError && (
               <p className="text-[10px] text-destructive font-medium uppercase tracking-tighter">
                 {locationError}
@@ -116,7 +115,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Floating Action Button */}
       <Button
         onClick={() => router.push("/add")}
         className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-50"

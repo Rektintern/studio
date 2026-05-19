@@ -1,7 +1,6 @@
-
 "use client";
 
-import { Reminder } from "@/lib/types";
+import type { Reminder } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Navigation, Clock, Trash2 } from "lucide-react";
@@ -10,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toggleReminder, deleteReminder } from "@/lib/store";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { motion, useDragControls, PanInfo } from "framer-motion";
+import { motion, type PanInfo } from "framer-motion";
 
 interface ReminderCardProps {
   reminder: Reminder;
@@ -36,7 +35,6 @@ export function ReminderCard({ reminder, onToggle, onDelete, index }: ReminderCa
   };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    // If swiped left more than 100px, delete
     if (info.offset.x < -100) {
       handleDelete();
     }
@@ -46,7 +44,6 @@ export function ReminderCard({ reminder, onToggle, onDelete, index }: ReminderCa
 
   return (
     <div className="relative overflow-hidden rounded-lg group">
-      {/* Delete Background Layer */}
       <div className="absolute inset-0 bg-destructive flex items-center justify-end px-6 z-0">
         <div className="flex flex-col items-center gap-1 text-white opacity-80">
           <Trash2 size={24} />
@@ -54,7 +51,6 @@ export function ReminderCard({ reminder, onToggle, onDelete, index }: ReminderCa
         </div>
       </div>
 
-      {/* Swipeable Foreground Card */}
       <motion.div
         drag="x"
         dragConstraints={{ left: -120, right: 0 }}
