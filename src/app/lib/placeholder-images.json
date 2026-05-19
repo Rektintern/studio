@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "map-preview",
+      "description": "Interactive map showing location pins",
+      "imageUrl": "https://picsum.photos/seed/12/800/400",
+      "imageHint": "city map"
+    },
+    {
+      "id": "avatar-user",
+      "description": "User profile avatar",
+      "imageUrl": "https://picsum.photos/seed/45/100/100",
+      "imageHint": "portrait person"
+    }
+  ]
+}
