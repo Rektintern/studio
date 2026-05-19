@@ -30,13 +30,13 @@ export default function Settings() {
 
       <div className="space-y-10">
         {permissionStatus === 'denied' && (
-          <Card className="p-6 bg-destructive/5 border border-destructive/20 rounded-3xl">
+          <Card className="p-6 bg-primary/5 border border-primary/20 rounded-3xl">
             <div className="flex gap-4">
-              <div className="p-2 bg-destructive/10 rounded-xl h-fit">
-                <AlertTriangle className="text-destructive" size={20} />
+              <div className="p-2 bg-primary/10 rounded-xl h-fit">
+                <AlertTriangle className="text-primary" size={20} />
               </div>
               <div className="space-y-1">
-                <h3 className="font-bold text-sm text-destructive">Tracking Restricted</h3>
+                <h3 className="font-bold text-sm text-primary">Tracking Restricted</h3>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Your browser has blocked location access. Please enable it in your browser settings and refresh the page to use geofencing.
                 </p>
@@ -116,7 +116,7 @@ export default function Settings() {
               </div>
               <ChevronLeft size={16} className="rotate-180 opacity-30 group-hover:opacity-100 transition-opacity" />
             </Button>
-            <Button variant="ghost" className="w-full h-14 text-destructive font-bold hover:bg-destructive/5 rounded-2xl">
+            <Button variant="ghost" className="w-full h-14 text-primary font-bold hover:bg-primary/5 rounded-2xl">
               Purge All Local Data
             </Button>
           </div>

@@ -84,7 +84,7 @@ export default function Home() {
           </h1>
           <div className="flex flex-col gap-1 mt-1.5">
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-red-500'} ${locationLoading ? 'animate-pulse' : ''}`} />
+              <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-primary/40'} ${locationLoading ? 'animate-pulse' : ''}`} />
               <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                 {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking Active" : "Signal Offline"}
               </p>
@@ -99,10 +99,10 @@ export default function Home() {
       <AnimatePresence>
         {permissionStatus === 'denied' && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6">
-            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-2xl">
-              <AlertCircle className="h-4 w-4" />
+            <Alert className="bg-primary/10 border-primary/20 text-primary rounded-2xl">
+              <AlertCircle className="h-4 w-4 text-primary" />
               <AlertTitle className="font-bold">Location Disabled</AlertTitle>
-              <AlertDescription className="text-xs">
+              <AlertDescription className="text-xs font-medium opacity-90">
                 We can&apos;t notify you nearby. Please enable location in your browser settings.
               </AlertDescription>
             </Alert>
