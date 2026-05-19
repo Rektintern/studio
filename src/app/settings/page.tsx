@@ -5,13 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, Shield, Bell, Zap, Map, Info } from "lucide-react";
+import { ChevronLeft, Shield, Bell, Zap, Map, Info, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useLocation } from "@/components/location-provider";
 
 export default function Settings() {
   const router = useRouter();
+  const { permissionStatus } = useLocation();
 
   return (
     <motion.div 
@@ -27,6 +29,22 @@ export default function Settings() {
       </header>
 
       <div className="space-y-10">
+        {permissionStatus === 'denied' && (
+          <Card className="p-6 bg-destructive/5 border border-destructive/20 rounded-3xl">
+            <div className="flex gap-4">
+              <div className="p-2 bg-destructive/10 rounded-xl h-fit">
+                <AlertTriangle className="text-destructive" size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm text-destructive">Tracking Restricted</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Your browser has blocked location access. Please enable it in your browser settings and refresh the page to use geofencing.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <Bell size={16} className="text-primary" />
@@ -73,6 +91,9 @@ export default function Settings() {
               <Switch defaultChecked className="data-[state=checked]:bg-primary" />
             </div>
           </Card>
+          <p className="px-1 text-[10px] text-muted-foreground/60 leading-relaxed italic">
+            Note: For the best background performance, keep this tab open or add the app to your home screen.
+          </p>
         </section>
 
         <section className="space-y-4">

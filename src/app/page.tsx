@@ -7,20 +7,31 @@ import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost, Plus, Filter } from "lucide-react";
+import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
 import { AnimatePresence, motion } from "framer-motion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
   const router = useRouter();
-  const { location: userLocation, error: locationError, isLoading: locationLoading } = useLocation();
+  const { location: userLocation, error: locationError, permissionStatus, isLoading: locationLoading } = useLocation();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [search, setSearch] = useState("");
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     refresh();
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const refresh = () => {
@@ -69,6 +80,31 @@ export default function Home() {
           <Bell size={18} className="text-muted-foreground" />
         </Button>
       </header>
+
+      <AnimatePresence>
+        {permissionStatus === 'denied' && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6">
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle className="font-bold">Location Disabled</AlertTitle>
+              <AlertDescription className="text-xs">
+                We can&apos;t notify you nearby. Please enable location in your browser settings.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+        {!isOnline && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6">
+            <Alert className="bg-muted border-border/50 rounded-2xl">
+              <WifiOff className="h-4 w-4" />
+              <AlertTitle className="font-bold">Offline Mode</AlertTitle>
+              <AlertDescription className="text-xs">
+                Saved reminders still work, but you can&apos;t search for new locations.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative mb-8 group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />

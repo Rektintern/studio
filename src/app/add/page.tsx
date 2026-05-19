@@ -68,6 +68,9 @@ export default function AddReminder() {
 
       setIsSearching(true);
       try {
+        if (!navigator.onLine) {
+          throw new Error("No internet connection. Please try again when online.");
+        }
         const response = await fetch(
           `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5`
         );
@@ -86,15 +89,19 @@ export default function AddReminder() {
         
         setSuggestions(mappedSuggestions);
         setShowSuggestions(true);
-      } catch (err) {
-        // Silent fail
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Search Error",
+          description: err.message || "Could not retrieve location suggestions.",
+        });
       } finally {
         setIsSearching(false);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, toast]);
 
   const handleSelectSuggestion = (suggestion: AutocompleteSuggestion) => {
     setLocation({
@@ -105,14 +112,14 @@ export default function AddReminder() {
     setSearchQuery(suggestion.name);
     setShowSuggestions(false);
     toast({
-      title: "Pin Dropped",
+      title: "Location Selected",
       description: suggestion.name,
     });
   };
 
   const handleAiCategorize = async () => {
     if (!title) {
-      toast({ title: "Note needed", description: "Describe your reminder first." });
+      toast({ title: "Details needed", description: "Describe your task first." });
       return;
     }
     setIsAiLoading(true);
@@ -120,7 +127,7 @@ export default function AddReminder() {
       const result = await suggestLocationTags({ reminderContent: title });
       setTags(result.tags);
     } catch (err) {
-      // AI fail silently
+      toast({ variant: "destructive", title: "AI Error", description: "Failed to suggest tags." });
     } finally {
       setIsAiLoading(false);
     }
@@ -129,22 +136,25 @@ export default function AddReminder() {
   const handleUseCurrentLocation = () => {
     if (currentLoc) {
       setLocation(currentLoc);
-      setSearchQuery("My Current Position");
+      setSearchQuery("Current Position");
       toast({ 
-        title: "GPS Locked", 
-        description: "Reminder set to your current coordinates." 
+        title: "Pin Set", 
+        description: "Reminder set to your exact current location." 
       });
     } else {
       toast({ 
         variant: "destructive",
-        title: "Signal Error", 
-        description: "Could not retrieve your location." 
+        title: "GPS Error", 
+        description: "Could not lock on to your location. Check your signal." 
       });
     }
   };
 
   const handleSave = () => {
-    if (!title) return;
+    if (!title) {
+      toast({ variant: "destructive", title: "Error", description: "Please enter a task name." });
+      return;
+    }
     const newReminder: Reminder = {
       id: crypto.randomUUID(),
       title,

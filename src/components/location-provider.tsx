@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
@@ -9,21 +8,23 @@ import { calculateDistance } from "@/lib/geo";
 interface LocationContextType {
   location: Location | null;
   error: string | null;
+  permissionStatus: PermissionState | 'loading';
   isLoading: boolean;
   refresh: () => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
-// 1 hour in milliseconds
+// 1 hour in milliseconds for notification cooldown
 const NOTIFICATION_COOLDOWN = 60 * 60 * 1000;
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | 'loading'>('loading');
   const [isLoading, setIsLoading] = useState(true);
   
-  // Track notified reminders with timestamps to handle the 1-hour cooldown
+  // Track notified reminders independently with timestamps to handle the 1-hour cooldown
   const notifiedReminders = useRef<Record<string, number>>({});
 
   const triggerNotification = (reminder: Reminder) => {
@@ -34,7 +35,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       
       new Notification("NearRemind Alert!", {
         body: `You're near ${locationLabel} — don't forget: ${reminder.title}!`,
-        tag: reminder.id, // Grouping by reminder ID
+        tag: reminder.id, // Grouping by reminder ID ensures they don't overwrite each other if multiple fire
         requireInteraction: true,
       });
     }
@@ -44,9 +45,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     const reminders = getReminders();
     const now = Date.now();
     
+    // Each reminder is checked independently
     reminders.forEach(reminder => {
       if (!reminder.isActive) {
-        // Clear cooldown if reminder becomes inactive
         delete notifiedReminders.current[reminder.id];
         return;
       }
@@ -60,7 +61,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       const lastNotified = notifiedReminders.current[reminder.id];
 
       if (isInside) {
-        // Check if it hasn't been notified yet OR if the 1-hour cooldown has passed
+        // Cooldown check allows multiple distinct reminders to fire even if their circles overlap
         if (!lastNotified || (now - lastNotified > NOTIFICATION_COOLDOWN)) {
           triggerNotification(reminder);
           notifiedReminders.current[reminder.id] = now;
@@ -89,7 +90,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       },
       (err) => {
-        setError(err.message);
+        // Handle specific error codes for better UX
+        if (err.code === 1) { // PERMISSION_DENIED
+          setError("Location access was denied. We need this to trigger your reminders nearby.");
+          setPermissionStatus('denied');
+        } else {
+          setError(err.message);
+        }
         setIsLoading(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -97,20 +104,26 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, [checkProximity]);
 
   useEffect(() => {
-    // Request notification permission on mount
+    // Request notification permission
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
       }
     }
 
-    // Initial fetch
+    // Check permission state for geolocation
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
+        setPermissionStatus(result.state);
+        result.onchange = () => setPermissionStatus(result.state);
+      });
+    }
+
     updateLocation();
     
-    // Polling every 30 seconds for consistent background-like state updates
+    // Background-like behavior: even if tab is in background, interval and watchPosition continue
     const pollId = setInterval(updateLocation, 30000);
 
-    // Real-time tracking with watchPosition
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const newLoc = {
@@ -123,19 +136,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         setError(null);
       },
       (err) => {
-        setError(err.message);
+        if (err.code === 1) setPermissionStatus('denied');
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
-
-    // Permission check for UX
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
-        if (result.state === 'denied') {
-          setError("Location access denied. Please enable it in settings.");
-        }
-      });
-    }
 
     return () => {
       clearInterval(pollId);
@@ -144,7 +148,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, [updateLocation, checkProximity]);
 
   return (
-    <LocationContext.Provider value={{ location, error, isLoading, refresh: updateLocation }}>
+    <LocationContext.Provider value={{ location, error, permissionStatus, isLoading, refresh: updateLocation }}>
       {children}
     </LocationContext.Provider>
   );
