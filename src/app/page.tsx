@@ -2,17 +2,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Reminder } from "@/lib/types";
 import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost } from "lucide-react";
+import { MapPin, Search, Bell, Ghost, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function Home() {
+  const router = useRouter();
   const { location: userLocation, error: locationError, isLoading: locationLoading } = useLocation();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [search, setSearch] = useState("");
@@ -26,7 +29,6 @@ export default function Home() {
     setReminders(data);
   };
 
-  // Sort and filter reminders based on live user location
   const processedReminders = reminders
     .map(r => {
       if (!userLocation) return r;
@@ -44,7 +46,7 @@ export default function Home() {
     });
 
   return (
-    <div className="px-6 pt-10 pb-24 min-h-screen">
+    <div className="px-6 pt-10 pb-32 min-h-screen">
       <header className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-headline font-bold text-foreground indigo-glow">NearRemind</h1>
@@ -83,27 +85,44 @@ export default function Home() {
           <span className="text-xs text-primary font-medium">{processedReminders.length} Active Pins</span>
         </div>
 
-        {processedReminders.length > 0 ? (
-          processedReminders.map((reminder, idx) => (
-            <ReminderCard 
-              key={reminder.id} 
-              reminder={reminder} 
-              index={idx}
-              onToggle={refresh} 
-            />
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center">
-              <Ghost className="text-muted-foreground/30" size={32} />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-headline font-medium text-muted-foreground">No reminders found</h3>
-              <p className="text-xs text-muted-foreground/60 max-w-[200px]">Add your first location-based task to see it on the dashboard.</p>
-            </div>
-          </div>
-        )}
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {processedReminders.length > 0 ? (
+              processedReminders.map((reminder, idx) => (
+                <ReminderCard 
+                  key={reminder.id} 
+                  reminder={reminder} 
+                  index={idx}
+                  onToggle={refresh}
+                  onDelete={refresh}
+                />
+              ))
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-20 text-center space-y-4"
+              >
+                <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center">
+                  <Ghost className="text-muted-foreground/30" size={32} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-headline font-medium text-muted-foreground">No reminders found</h3>
+                  <p className="text-xs text-muted-foreground/60 max-w-[200px]">Add your first location-based task to see it on the dashboard.</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </section>
+
+      {/* Floating Action Button */}
+      <Button
+        onClick={() => router.push("/add")}
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-50"
+      >
+        <Plus size={28} />
+      </Button>
 
       <BottomNav />
     </div>
