@@ -10,22 +10,14 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { MapPin, Search, Bell, Ghost } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "@/components/location-provider";
 
 export default function Home() {
+  const { location: userLocation, error: locationError, isLoading: locationLoading } = useLocation();
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    // 1. Get User Location
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.error(err)
-      );
-    }
-
-    // 2. Initial load
     refresh();
   }, []);
 
@@ -34,12 +26,12 @@ export default function Home() {
     setReminders(data);
   };
 
-  // Sort and filter reminders
+  // Sort and filter reminders based on live user location
   const processedReminders = reminders
     .map(r => {
       if (!userLocation) return r;
       const distance = calculateDistance(
-        userLocation.lat, userLocation.lng,
+        userLocation.latitude, userLocation.longitude,
         r.location.latitude, r.location.longitude
       );
       return { ...r, distance };
@@ -56,10 +48,17 @@ export default function Home() {
       <header className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-headline font-bold text-foreground indigo-glow">NearRemind</h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-            <MapPin size={14} className="text-accent" />
-            {userLocation ? "Location active" : "Tracking location..."}
-          </p>
+          <div className="flex flex-col gap-1 mt-1">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <MapPin size={14} className={userLocation ? "text-accent" : "text-destructive"} />
+              {locationLoading ? "Acquiring signal..." : userLocation ? "Tracking Active" : "Location Offline"}
+            </p>
+            {locationError && (
+              <p className="text-[10px] text-destructive font-medium uppercase tracking-tighter">
+                {locationError}
+              </p>
+            )}
+          </div>
         </div>
         <Button variant="ghost" size="icon" className="rounded-full bg-secondary/50">
           <Bell size={20} className="text-muted-foreground" />

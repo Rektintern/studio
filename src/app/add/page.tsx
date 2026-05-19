@@ -9,16 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, MapPin, Sparkles, Navigation, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, MapPin, Sparkles, Navigation, CheckCircle2, Loader2 } from "lucide-react";
 import { saveReminder } from "@/lib/store";
 import { Reminder, Location } from "@/lib/types";
 import { suggestLocationTags } from "@/ai/flows/suggest-location-tags";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "@/components/location-provider";
 
 export default function AddReminder() {
   const router = useRouter();
   const { toast } = useToast();
+  const { location: currentLoc, isLoading: isLocLoading } = useLocation();
   const [title, setTitle] = useState("");
   const [radius, setRadius] = useState([200]);
   const [tags, setTags] = useState<string[]>([]);
@@ -42,6 +44,22 @@ export default function AddReminder() {
       console.error(err);
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (currentLoc) {
+      setLocation(currentLoc);
+      toast({ 
+        title: "Spatial Pin Set", 
+        description: `Coordinates updated to your current position.` 
+      });
+    } else {
+      toast({ 
+        variant: "destructive",
+        title: "Signal Lost", 
+        description: "Unable to retrieve current coordinates. Check your GPS settings." 
+      });
     }
   };
 
@@ -137,8 +155,15 @@ export default function AddReminder() {
                 <p className="text-sm font-semibold truncate w-full">{location.address}</p>
                 <p className="text-[10px] text-muted-foreground">Lat: {location.latitude.toFixed(4)} Lon: {location.longitude.toFixed(4)}</p>
               </div>
-              <Button size="sm" variant="outline" className="h-8 text-xs gap-2 rounded-lg border-primary/30 text-primary">
-                <Navigation size={12} /> Use current location
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="h-8 text-xs gap-2 rounded-lg border-primary/30 text-primary"
+                onClick={handleUseCurrentLocation}
+                disabled={isLocLoading}
+              >
+                {isLocLoading ? <Loader2 className="animate-spin" size={12} /> : <Navigation size={12} />} 
+                Use current location
               </Button>
             </div>
           </div>
