@@ -20,10 +20,18 @@ export default function Home() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [search, setSearch] = useState("");
   const [isOnline, setIsOnline] = useState(true);
+  const [greeting, setGreeting] = useState("Hello");
 
   useEffect(() => {
     refresh();
     setIsOnline(navigator.onLine);
+    
+    // Time-based greeting logic
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
@@ -64,19 +72,26 @@ export default function Home() {
     >
       <header className="flex justify-between items-start mb-8">
         <div>
+          <motion.p 
+            initial={{ opacity: 0, x: -5 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1"
+          >
+            {greeting}, explorer
+          </motion.p>
           <h1 className="text-3xl font-headline font-bold text-foreground tracking-tight">
             Near<span className="text-primary">Remind</span>
           </h1>
           <div className="flex flex-col gap-1 mt-1.5">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${userLocation ? 'bg-green-500' : 'bg-red-500'} ${locationLoading ? 'animate-pulse' : ''}`} />
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking" : "Signal Offline"}
+              <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-red-500'} ${locationLoading ? 'animate-pulse' : ''}`} />
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking Active" : "Signal Offline"}
               </p>
             </div>
           </div>
         </div>
-        <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow">
+        <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow hover:bg-primary/5 hover:text-primary transition-all">
           <Bell size={18} className="text-muted-foreground" />
         </Button>
       </header>
