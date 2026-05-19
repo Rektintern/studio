@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,7 +18,8 @@ import {
   Loader2,
   Search as SearchIcon,
   X,
-  Target
+  Target,
+  AlertCircle
 } from "lucide-react";
 import { saveReminder } from "@/lib/store";
 import type { Reminder, Location } from "@/lib/types";
@@ -91,8 +93,7 @@ export default function AddReminder() {
         setShowSuggestions(true);
       } catch (err: any) {
         toast({
-          variant: "destructive",
-          title: "Search Error",
+          title: "Search Unavailable",
           description: err.message || "Could not retrieve location suggestions.",
         });
       } finally {
@@ -127,7 +128,7 @@ export default function AddReminder() {
       const result = await suggestLocationTags({ reminderContent: title });
       setTags(result.tags);
     } catch (err) {
-      toast({ variant: "destructive", title: "AI Error", description: "Failed to suggest tags." });
+      toast({ title: "AI Busy", description: "Failed to suggest tags." });
     } finally {
       setIsAiLoading(false);
     }
@@ -143,16 +144,15 @@ export default function AddReminder() {
       });
     } else {
       toast({ 
-        variant: "destructive",
-        title: "GPS Error", 
-        description: "Could not lock on to your location. Check your signal." 
+        title: "GPS Unavailable", 
+        description: "Could not lock on to your location. Check your browser settings." 
       });
     }
   };
 
   const handleSave = () => {
     if (!title) {
-      toast({ variant: "destructive", title: "Error", description: "Please enter a task name." });
+      toast({ title: "Task Name Missing", description: "Please enter a title for your reminder." });
       return;
     }
     const newReminder: Reminder = {
