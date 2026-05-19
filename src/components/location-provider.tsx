@@ -15,31 +15,39 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
+// 1 hour in milliseconds
+const NOTIFICATION_COOLDOWN = 60 * 60 * 1000;
+
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Track notified reminders to avoid spamming
-  const notifiedReminders = useRef<Set<string>>(new Set());
+  // Track notified reminders with timestamps to handle the 1-hour cooldown
+  const notifiedReminders = useRef<Record<string, number>>({});
 
   const triggerNotification = (reminder: Reminder) => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
 
     if (Notification.permission === "granted") {
+      const locationLabel = reminder.location.address || "your destination";
+      
       new Notification("NearRemind Alert!", {
-        body: `You are near: ${reminder.title}`,
-        icon: "/favicon.ico", // Using a default if available, or just omit
+        body: `You're near ${locationLabel} — don't forget: ${reminder.title}!`,
+        tag: reminder.id, // Grouping by reminder ID
+        requireInteraction: true,
       });
     }
   };
 
   const checkProximity = useCallback((currentLoc: Location) => {
     const reminders = getReminders();
+    const now = Date.now();
     
     reminders.forEach(reminder => {
       if (!reminder.isActive) {
-        notifiedReminders.current.delete(reminder.id);
+        // Clear cooldown if reminder becomes inactive
+        delete notifiedReminders.current[reminder.id];
         return;
       }
 
@@ -49,15 +57,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       );
 
       const isInside = distance <= reminder.radius;
+      const lastNotified = notifiedReminders.current[reminder.id];
 
       if (isInside) {
-        if (!notifiedReminders.current.has(reminder.id)) {
+        // Check if it hasn't been notified yet OR if the 1-hour cooldown has passed
+        if (!lastNotified || (now - lastNotified > NOTIFICATION_COOLDOWN)) {
           triggerNotification(reminder);
-          notifiedReminders.current.add(reminder.id);
+          notifiedReminders.current[reminder.id] = now;
         }
-      } else {
-        // Reset notification state if they leave the radius
-        notifiedReminders.current.delete(reminder.id);
       }
     });
   }, []);
@@ -100,7 +107,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     // Initial fetch
     updateLocation();
     
-    // Polling every 30 seconds for consistent state updates and proximity checks
+    // Polling every 30 seconds for consistent background-like state updates
     const pollId = setInterval(updateLocation, 30000);
 
     // Real-time tracking with watchPosition
