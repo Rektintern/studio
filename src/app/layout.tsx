@@ -1,12 +1,11 @@
-
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
 import { LocationProvider } from "@/components/location-provider";
 
 export const metadata: Metadata = {
-  title: 'NearRemind | Proximity Matters',
-  description: 'Smart location-based reminders for a focused life.',
+  title: 'NearRemind | Proximity Reminders',
+  description: 'Smart location-based reminders that trigger when you arrive.',
 };
 
 export default function RootLayout({
@@ -15,17 +14,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </head>
-      <body className="font-body antialiased min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
         <LocationProvider>
-          <main className="flex-1 max-w-md mx-auto w-full relative pb-20 overflow-x-hidden">
+          <div className="flex-1 max-w-md mx-auto w-full relative overflow-x-hidden">
             {children}
-          </main>
+          </div>
         </LocationProvider>
         <Toaster />
       </body>

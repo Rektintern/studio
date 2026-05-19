@@ -16,7 +16,8 @@ import {
   CheckCircle2, 
   Loader2,
   Search as SearchIcon,
-  X
+  X,
+  Target
 } from "lucide-react";
 import { saveReminder } from "@/lib/store";
 import type { Reminder, Location } from "@/lib/types";
@@ -26,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/components/location-provider";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface AutocompleteSuggestion {
   name: string;
@@ -85,7 +87,7 @@ export default function AddReminder() {
         setSuggestions(mappedSuggestions);
         setShowSuggestions(true);
       } catch (err) {
-        // Error handling via silent fail for UX smoothness
+        // Silent fail
       } finally {
         setIsSearching(false);
       }
@@ -103,14 +105,14 @@ export default function AddReminder() {
     setSearchQuery(suggestion.name);
     setShowSuggestions(false);
     toast({
-      title: "Location pinned",
-      description: `Target set to ${suggestion.name}`,
+      title: "Pin Dropped",
+      description: suggestion.name,
     });
   };
 
   const handleAiCategorize = async () => {
     if (!title) {
-      toast({ title: "Reminder title needed", description: "Enter what you need to remember first." });
+      toast({ title: "Note needed", description: "Describe your reminder first." });
       return;
     }
     setIsAiLoading(true);
@@ -127,16 +129,16 @@ export default function AddReminder() {
   const handleUseCurrentLocation = () => {
     if (currentLoc) {
       setLocation(currentLoc);
-      setSearchQuery("Current Location");
+      setSearchQuery("My Current Position");
       toast({ 
-        title: "Spatial Pin Set", 
-        description: `Coordinates updated to your current position.` 
+        title: "GPS Locked", 
+        description: "Reminder set to your current coordinates." 
       });
     } else {
       toast({ 
         variant: "destructive",
-        title: "Signal Lost", 
-        description: "Unable to retrieve current coordinates. Check your GPS settings." 
+        title: "Signal Error", 
+        description: "Could not retrieve your location." 
       });
     }
   };
@@ -157,103 +159,115 @@ export default function AddReminder() {
   };
 
   return (
-    <div className="px-6 pt-10 pb-24 min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" className="rounded-full bg-secondary/50" onClick={() => router.back()}>
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="px-6 pt-12 pb-32 min-h-screen"
+    >
+      <header className="flex items-center gap-4 mb-10">
+        <Button variant="ghost" size="icon" className="rounded-2xl bg-muted/50 text-foreground" onClick={() => router.back()}>
           <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-headline font-bold text-foreground">Add Reminder</h1>
+        <h1 className="text-2xl font-headline font-bold text-foreground">Create Reminder</h1>
       </header>
 
-      <div className="space-y-8">
-        <div className="space-y-2">
-          <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">What to remember?</Label>
+      <div className="space-y-10">
+        <section className="space-y-3">
+          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Task Details</Label>
           <div className="relative">
             <Input 
-              placeholder="e.g. Buy groceries" 
+              placeholder="What do you need to do?" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="h-14 bg-secondary/30 border-border/50 rounded-xl text-lg pr-12 focus-visible:ring-primary"
+              className="h-16 bg-card border-border/40 rounded-2xl text-lg native-shadow pr-14 focus-visible:ring-primary"
             />
             <Button 
               size="icon" 
               variant="ghost" 
-              className="absolute right-2 top-2 text-primary hover:bg-primary/10 rounded-lg"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:bg-primary/10 rounded-xl transition-all"
               onClick={handleAiCategorize}
               disabled={isAiLoading}
             >
-              <Sparkles size={20} className={isAiLoading ? "animate-pulse" : ""} />
+              <Sparkles size={20} className={isAiLoading ? "animate-spin" : ""} />
             </Button>
           </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px] py-1 px-3">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
+          <AnimatePresence>
+            {tags.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="flex flex-wrap gap-2 mt-3"
+              >
+                {tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-bold py-1 px-3 rounded-lg">
+                    #{tag}
+                  </Badge>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
 
-        <div className="space-y-2 relative">
-          <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Location Target</Label>
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+        <section className="space-y-3 relative">
+          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Target Location</Label>
+          <div className="relative group">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
             <Input 
-              placeholder="Search place or address..." 
+              placeholder="Search address or business..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              className="pl-10 h-14 bg-secondary/30 border-border/50 rounded-xl text-lg focus-visible:ring-accent"
+              className="pl-12 h-16 bg-card border-border/40 rounded-2xl native-shadow text-base focus-visible:ring-primary"
             />
-            {isSearching && (
-              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-accent" size={18} />
-            )}
-            {searchQuery && !isSearching && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSuggestions([]);
-                }}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              {isSearching && <Loader2 className="animate-spin text-primary" size={18} />}
+              {searchQuery && !isSearching && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => { setSearchQuery(""); setSuggestions([]); }}>
+                  <X size={16} />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {showSuggestions && suggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute z-50 w-full mt-2"
               >
-                <X size={16} />
-              </Button>
+                <Card className="bg-card/95 backdrop-blur-xl border-border/40 native-shadow-lg overflow-hidden rounded-2xl">
+                  <div className="max-h-[280px] overflow-y-auto">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={`${s.latitude}-${s.longitude}-${i}`}
+                        className="w-full text-left p-5 hover:bg-primary/5 transition-colors border-b border-border/20 last:border-none group flex items-start gap-4"
+                        onClick={() => handleSelectSuggestion(s)}
+                      >
+                        <div className="p-2 rounded-xl bg-muted group-hover:bg-primary/20 group-hover:text-primary transition-all">
+                          <MapPin size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-foreground line-clamp-1">{s.name}</p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{s.address}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+        </section>
 
-          {showSuggestions && suggestions.length > 0 && (
-            <Card className="absolute z-50 w-full mt-1 bg-card/95 backdrop-blur-md border-border/50 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="max-h-[240px] overflow-y-auto">
-                {suggestions.map((s, i) => (
-                  <button
-                    key={`${s.latitude}-${s.longitude}-${i}`}
-                    className="w-full text-left p-4 hover:bg-primary/10 transition-colors border-b border-border/30 last:border-none group"
-                    onClick={() => handleSelectSuggestion(s)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <MapPin className="text-primary mt-1 shrink-0" size={16} />
-                      <div>
-                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{s.name}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">{s.address}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Radius Selector</Label>
-            <span className="text-sm font-bold text-accent">{radius[0]}m</span>
+        <section className="space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Trigger Radius</Label>
+            <span className="text-xs font-bold text-primary px-3 py-1 bg-primary/10 rounded-full">{radius[0]}m</span>
           </div>
-          <Card className="p-6 bg-secondary/20 border-border/50 rounded-xl">
+          <Card className="p-8 bg-card border-none native-shadow rounded-2xl">
             <Slider 
               value={radius} 
               onValueChange={setRadius} 
@@ -262,57 +276,62 @@ export default function AddReminder() {
               step={50}
               className="py-4"
             />
-            <p className="text-[10px] text-muted-foreground/60 mt-2 text-center uppercase tracking-tighter">
-              Adjust triggering distance from center point
-            </p>
+            <div className="flex justify-between mt-4">
+              <span className="text-[10px] font-bold text-muted-foreground/40">50M</span>
+              <span className="text-[10px] font-bold text-muted-foreground/40">1KM</span>
+            </div>
           </Card>
-        </div>
+        </section>
 
-        <div className="space-y-4">
-          <Label className="text-xs font-headline uppercase tracking-widest text-muted-foreground">Adaptive Geo-Point</Label>
-          <div className="aspect-video bg-secondary/30 rounded-xl border border-border/50 relative overflow-hidden flex items-center justify-center">
+        <section className="space-y-4">
+          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Geofence Preview</Label>
+          <div className="aspect-[16/10] bg-muted rounded-2xl border border-border/30 relative overflow-hidden flex items-center justify-center native-shadow">
             {mapPlaceholder && (
               <Image 
                 src={mapPlaceholder.imageUrl}
                 alt={mapPlaceholder.description}
                 fill
-                className="absolute inset-0 object-cover opacity-50 grayscale contrast-125"
+                className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale"
                 data-ai-hint={mapPlaceholder.imageHint}
               />
             )}
-            <div className="relative z-10 flex flex-col items-center gap-3 bg-card/90 backdrop-blur-md p-4 rounded-xl border border-border shadow-2xl max-w-[80%]">
-              <div className="p-2 bg-primary/20 rounded-full">
-                <MapPin className="text-primary" size={24} />
+            <div className="relative z-10 flex flex-col items-center gap-4 bg-card/90 backdrop-blur-xl p-6 rounded-3xl border border-border/50 native-shadow-lg max-w-[85%]">
+              <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
+                <Target size={28} />
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold truncate w-full">{location.address || "Untitled Location"}</p>
-                <p className="text-[10px] text-muted-foreground">Lat: {location.latitude.toFixed(4)} Lon: {location.longitude.toFixed(4)}</p>
+                <p className="text-sm font-bold truncate max-w-[200px] mb-1">{location.address || "Select a Location"}</p>
+                <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-muted-foreground tracking-tighter uppercase">
+                  <span>LAT: {location.latitude.toFixed(3)}</span>
+                  <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                  <span>LON: {location.longitude.toFixed(3)}</span>
+                </div>
               </div>
               <Button 
                 size="sm" 
                 variant="outline" 
-                className="h-8 text-xs gap-2 rounded-lg border-primary/30 text-primary"
+                className="h-10 text-xs gap-2 rounded-xl border-primary/30 text-primary font-bold px-5"
                 onClick={handleUseCurrentLocation}
                 disabled={isLocLoading}
               >
-                {isLocLoading ? <Loader2 className="animate-spin" size={12} /> : <Navigation size={12} />} 
-                Use current location
+                {isLocLoading ? <Loader2 className="animate-spin" size={14} /> : <Navigation size={14} />} 
+                Current Location
               </Button>
             </div>
           </div>
-        </div>
+        </section>
 
         <Button 
-          className="w-full h-16 rounded-xl text-lg font-headline font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 gap-3"
+          className="w-full h-16 rounded-2xl text-lg font-headline font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 gap-3 border-b-4 border-primary-foreground/10"
           onClick={handleSave}
           disabled={!title}
         >
-          <CheckCircle2 size={24} />
-          Activate Proximity Pin
+          <CheckCircle2 size={24} strokeWidth={2.5} />
+          Activate Geofence
         </Button>
       </div>
 
       <BottomNav />
-    </div>
+    </motion.div>
   );
 }

@@ -2,15 +2,15 @@
   "placeholderImages": [
     {
       "id": "map-preview",
-      "description": "Interactive map showing location pins",
-      "imageUrl": "https://picsum.photos/seed/map1/800/400",
-      "imageHint": "city map"
+      "description": "Clean schematic city map for geofence visualizer",
+      "imageUrl": "https://picsum.photos/seed/map42/800/600",
+      "imageHint": "city plan"
     },
     {
-      "id": "avatar-user",
-      "description": "User profile avatar",
-      "imageUrl": "https://picsum.photos/seed/user1/100/100",
-      "imageHint": "portrait person"
+      "id": "empty-state",
+      "description": "Minimal illustration for empty states",
+      "imageUrl": "https://picsum.photos/seed/empty1/600/600",
+      "imageHint": "landscape minimal"
     }
   ]
 }

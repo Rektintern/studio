@@ -7,7 +7,7 @@ import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost, Plus } from "lucide-react";
+import { MapPin, Search, Bell, Ghost, Plus, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
@@ -45,47 +45,58 @@ export default function Home() {
     });
 
   return (
-    <div className="px-6 pt-10 pb-32 min-h-screen">
-      <header className="flex justify-between items-center mb-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="px-6 pt-12 pb-32 min-h-screen"
+    >
+      <header className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-headline font-bold text-foreground indigo-glow">NearRemind</h1>
-          <div className="flex flex-col gap-1 mt-1">
-            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <MapPin size={14} className={userLocation ? "text-accent" : "text-destructive"} />
-              {locationLoading ? "Acquiring signal..." : userLocation ? "Tracking Active" : "Location Offline"}
-            </div>
-            {locationError && (
-              <p className="text-[10px] text-destructive font-medium uppercase tracking-tighter">
-                {locationError}
+          <h1 className="text-3xl font-headline font-bold text-foreground tracking-tight">
+            Near<span className="text-primary">Remind</span>
+          </h1>
+          <div className="flex flex-col gap-1 mt-1.5">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${userLocation ? 'bg-green-500' : 'bg-red-500'} ${locationLoading ? 'animate-pulse' : ''}`} />
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking" : "Signal Offline"}
               </p>
-            )}
+            </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="rounded-full bg-secondary/50">
-          <Bell size={20} className="text-muted-foreground" />
+        <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow">
+          <Bell size={18} className="text-muted-foreground" />
         </Button>
       </header>
 
-      <div className="relative mb-8">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+      <div className="relative mb-8 group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
         <Input 
-          placeholder="Search proximity tasks..." 
-          className="pl-10 h-12 bg-secondary/30 border-border/50 rounded-xl focus-visible:ring-accent"
+          placeholder="Search locations..." 
+          className="pl-12 h-14 bg-card border-border/40 rounded-2xl native-shadow transition-all focus-visible:ring-primary focus-visible:border-primary/50 text-base"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground rounded-xl">
+            <Filter size={16} />
+          </Button>
+        </div>
       </div>
 
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-headline font-semibold text-muted-foreground uppercase tracking-widest">
-            Spatial Dashboard
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-headline font-bold text-foreground/80 uppercase tracking-widest">
+            Nearby Tasks
           </h2>
-          <span className="text-xs text-primary font-medium">{processedReminders.length} Active Pins</span>
+          <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+            {processedReminders.length} ACTIVE
+          </span>
         </div>
 
         <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="popLayout" initial={false}>
             {processedReminders.length > 0 ? (
               processedReminders.map((reminder, idx) => (
                 <ReminderCard 
@@ -98,17 +109,27 @@ export default function Home() {
               ))
             ) : (
               <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-20 text-center space-y-4"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center py-24 text-center"
               >
-                <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center">
-                  <Ghost className="text-muted-foreground/30" size={32} />
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+                  <div className="relative w-24 h-24 rounded-full bg-card border border-border/50 native-shadow-lg flex items-center justify-center">
+                    <Ghost className="text-primary/40" size={48} />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="font-headline font-medium text-muted-foreground">No reminders found</h3>
-                  <p className="text-xs text-muted-foreground/60 max-w-[200px]">Add your first location-based task to see it on the dashboard.</p>
-                </div>
+                <h3 className="text-lg font-headline font-bold text-foreground mb-2">Clear path ahead</h3>
+                <p className="text-sm text-muted-foreground max-w-[240px] leading-relaxed">
+                  Your spatial dashboard is empty. Add a location-based task to get started.
+                </p>
+                <Button 
+                  onClick={() => router.push("/add")}
+                  variant="outline" 
+                  className="mt-8 rounded-xl border-primary/30 text-primary hover:bg-primary/5 px-8"
+                >
+                  Create First Pin
+                </Button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -117,12 +138,12 @@ export default function Home() {
 
       <Button
         onClick={() => router.push("/add")}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-50"
+        className="fixed bottom-28 right-6 w-16 h-16 rounded-3xl shadow-2xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-all hover:scale-110 active:scale-95 z-50 native-shadow-lg border-4 border-background"
       >
-        <Plus size={28} />
+        <Plus size={32} strokeWidth={2.5} />
       </Button>
 
       <BottomNav />
-    </div>
+    </motion.div>
   );
 }

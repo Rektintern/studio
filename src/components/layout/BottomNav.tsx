@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -10,40 +9,35 @@ export function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", icon: Home, label: "Home" },
+    { href: "/", icon: Home, label: "Feed" },
     { href: "/add", icon: Plus, label: "Add" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center bg-card/80 backdrop-blur-xl border-t border-border px-6 py-4 max-w-md mx-auto">
-      {navItems.map(({ href, icon: Icon, label }) => {
-        const isActive = pathname === href;
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-col items-center gap-1 transition-all duration-300 relative",
-              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <div className={cn(
-              "p-2 rounded-full transition-all duration-300",
-              isActive && "bg-primary/10"
-            )}>
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 1.5} className={cn(
-                isActive && "indigo-glow"
-              )} />
-            </div>
-            {isActive && (
-              <span className="text-[10px] font-medium font-headline tracking-wider uppercase">
-                {label}
-              </span>
-            )}
-          </Link>
-        );
-      })}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 px-6 py-6 max-w-md mx-auto pointer-events-none">
+      <div className="flex justify-around items-center bg-card/90 backdrop-blur-xl border border-border/40 rounded-[2.5rem] native-shadow-lg px-4 py-3 pointer-events-auto">
+        {navItems.map(({ href, icon: Icon, label }) => {
+          const isActive = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-col items-center gap-1 transition-all duration-300 px-6 py-2 rounded-3xl",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              {isActive && (
+                <span className="text-[9px] font-bold font-headline tracking-[0.15em] uppercase">
+                  {label}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

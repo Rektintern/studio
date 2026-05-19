@@ -1,4 +1,3 @@
-
 "use client";
 
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -6,95 +5,114 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, Shield, Bell, Zap, Map } from "lucide-react";
+import { ChevronLeft, Shield, Bell, Zap, Map, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export default function Settings() {
   const router = useRouter();
 
   return (
-    <div className="px-6 pt-10 pb-24 min-h-screen animate-in fade-in duration-500">
-      <header className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" className="rounded-full bg-secondary/50" onClick={() => router.back()}>
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="px-6 pt-12 pb-32 min-h-screen"
+    >
+      <header className="flex items-center gap-4 mb-10">
+        <Button variant="ghost" size="icon" className="rounded-2xl bg-muted/50 text-foreground" onClick={() => router.back()}>
           <ChevronLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-headline font-bold text-foreground">Settings</h1>
+        <h1 className="text-2xl font-headline font-bold text-foreground">App Preferences</h1>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-10">
         <section className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Bell size={18} className="text-primary" />
-            <h2 className="text-sm font-headline font-semibold text-muted-foreground uppercase tracking-widest">Notification Frequency</h2>
+          <div className="flex items-center gap-2 px-1">
+            <Bell size={16} className="text-primary" />
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Notification Engine</h2>
           </div>
-          <Card className="p-6 bg-secondary/20 border-border/50 rounded-xl">
-            <RadioGroup defaultValue="immediate" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="immediate" className="font-semibold">Immediate Alert</Label>
-                  <p className="text-[10px] text-muted-foreground">Notify as soon as I enter the radius</p>
+          <Card className="bg-card border-none native-shadow rounded-3xl overflow-hidden">
+            <RadioGroup defaultValue="immediate" className="divide-y divide-border/20">
+              <div className="flex items-center justify-between p-6 hover:bg-muted/30 transition-colors">
+                <div className="space-y-1 pr-4">
+                  <Label htmlFor="immediate" className="font-bold text-base">Instant Alert</Label>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">Notify precisely when crossing geofence bounds.</p>
                 </div>
-                <RadioGroupItem value="immediate" id="immediate" className="border-primary text-primary" />
+                <RadioGroupItem value="immediate" id="immediate" className="w-5 h-5 border-2" />
               </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="summary" className="font-semibold">Contextual Summary</Label>
-                  <p className="text-[10px] text-muted-foreground">Group alerts by proximity zones</p>
+              <div className="flex items-center justify-between p-6 hover:bg-muted/30 transition-colors">
+                <div className="space-y-1 pr-4">
+                  <Label htmlFor="summary" className="font-bold text-base">Smart Summary</Label>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">Cluster nearby reminders into a single alert.</p>
                 </div>
-                <RadioGroupItem value="summary" id="summary" className="border-primary text-primary" />
+                <RadioGroupItem value="summary" id="summary" className="w-5 h-5 border-2" />
               </div>
             </RadioGroup>
           </Card>
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap size={18} className="text-accent" />
-            <h2 className="text-sm font-headline font-semibold text-muted-foreground uppercase tracking-widest">Proximity Engine</h2>
+          <div className="flex items-center gap-2 px-1">
+            <Zap size={16} className="text-accent" />
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Geo-Performance</h2>
           </div>
-          <Card className="p-6 bg-secondary/20 border-border/50 rounded-xl space-y-6">
+          <Card className="p-6 bg-card border-none native-shadow rounded-3xl space-y-6">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="font-semibold">High Accuracy Mode</Label>
-                <p className="text-[10px] text-muted-foreground">Uses GPS + WiFi for sub-meter tracking</p>
+              <div className="space-y-1 pr-4">
+                <Label className="font-bold text-base">Enhanced Accuracy</Label>
+                <p className="text-[11px] text-muted-foreground">Utilize sub-meter tracking for dense urban areas.</p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked className="data-[state=checked]:bg-primary" />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="font-semibold">Battery Saver</Label>
-                <p className="text-[10px] text-muted-foreground">Lower polling rate when stationary</p>
+            <div className="flex items-center justify-between pt-6 border-t border-border/20">
+              <div className="space-y-1 pr-4">
+                <Label className="font-bold text-base">Background Polling</Label>
+                <p className="text-[11px] text-muted-foreground">Keep tracking active when the screen is locked.</p>
               </div>
-              <Switch />
+              <Switch defaultChecked className="data-[state=checked]:bg-primary" />
             </div>
           </Card>
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield size={18} className="text-muted-foreground" />
-            <h2 className="text-sm font-headline font-semibold text-muted-foreground uppercase tracking-widest">Data & Privacy</h2>
+          <div className="flex items-center gap-2 px-1">
+            <Shield size={16} className="text-muted-foreground" />
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Security & Privacy</h2>
           </div>
-          <Card className="p-6 bg-secondary/20 border-border/50 rounded-xl space-y-4">
-            <Button variant="ghost" className="w-full justify-start text-xs font-semibold gap-3 h-10 px-0 hover:bg-transparent hover:text-primary">
-              <Map size={16} /> Export Location History
+          <div className="space-y-3">
+            <Button variant="outline" className="w-full h-14 justify-between bg-card border-none native-shadow rounded-2xl px-6 group">
+              <div className="flex items-center gap-3">
+                <Map size={18} className="text-primary" />
+                <span className="font-bold text-sm">Export My History</span>
+              </div>
+              <ChevronLeft size={16} className="rotate-180 opacity-30 group-hover:opacity-100 transition-opacity" />
             </Button>
-            <div className="border-t border-border/50 pt-4">
-              <Button variant="ghost" className="w-full justify-start text-xs font-semibold gap-3 h-10 px-0 text-destructive hover:bg-transparent hover:text-destructive/80">
-                Clear All Geo-Data
-              </Button>
-            </div>
-          </Card>
+            <Button variant="outline" className="w-full h-14 justify-between bg-card border-none native-shadow rounded-2xl px-6 group">
+              <div className="flex items-center gap-3">
+                <Info size={18} className="text-muted-foreground" />
+                <span className="font-bold text-sm">Privacy Dashboard</span>
+              </div>
+              <ChevronLeft size={16} className="rotate-180 opacity-30 group-hover:opacity-100 transition-opacity" />
+            </Button>
+            <Button variant="ghost" className="w-full h-14 text-destructive font-bold hover:bg-destructive/5 rounded-2xl">
+              Purge All Local Data
+            </Button>
+          </div>
         </section>
 
-        <div className="pt-10 flex flex-col items-center gap-2 opacity-30">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-headline font-bold">NR</div>
-          <p className="text-[10px] font-medium tracking-widest">NearRemind v1.0.4</p>
+        <div className="pt-12 flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-3xl bg-primary flex items-center justify-center text-white native-shadow-lg transform rotate-3">
+            <Zap size={32} fill="white" />
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-headline font-bold tracking-widest uppercase">NearRemind</p>
+            <p className="text-[9px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tighter">Version 1.2.0 • Build 842</p>
+          </div>
         </div>
       </div>
 
       <BottomNav />
-    </div>
+    </motion.div>
   );
 }

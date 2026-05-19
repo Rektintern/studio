@@ -1,30 +1,51 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 247 25% 9%;
+    --background: 210 20% 98%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 244 94% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 71% 4%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 211 100% 68%;
+    --accent-foreground: 224 71% 4%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 244 94% 65%;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
     --foreground: 210 20% 98%;
-    --card: 247 25% 12%;
+    --card: 224 71% 7%;
     --card-foreground: 210 20% 98%;
-    --popover: 247 25% 9%;
+    --popover: 224 71% 4%;
     --popover-foreground: 210 20% 98%;
     --primary: 244 94% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 247 25% 18%;
+    --secondary: 224 71% 12%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 247 25% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 224 71% 12%;
+    --muted-foreground: 215 20.2% 65.1%;
     --accent: 211 100% 68%;
-    --accent-foreground: 247 25% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 20% 98%;
-    --border: 247 25% 20%;
-    --input: 247 25% 20%;
+    --border: 224 71% 15%;
+    --input: 224 71% 15%;
     --ring: 244 94% 65%;
-    --radius: 1rem;
   }
 }
 
@@ -33,14 +54,39 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground selection:bg-primary/30;
+    @apply bg-background text-foreground selection:bg-primary/30 font-body antialiased;
   }
 }
 
-.indigo-glow {
-  text-shadow: 0 0 10px rgba(93, 82, 250, 0.5);
+.native-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-.card-glow:hover {
-  box-shadow: 0 0 20px rgba(93, 82, 250, 0.15);
+.native-shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+.indigo-glow {
+  text-shadow: 0 0 10px rgba(93, 82, 250, 0.3);
+}
+
+.glass-morphism {
+  @apply bg-background/80 backdrop-blur-md border-b border-border/50;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/40;
 }
