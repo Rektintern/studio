@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -19,7 +18,10 @@ import {
   Target, 
   Navigation, 
   Loader2,
-  Search
+  Search,
+  MapPin,
+  X,
+  Target as TargetIcon
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,14 +31,36 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+
+interface AutocompleteSuggestion {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
 
 export default function Home() {
   const router = useRouter();
-  const { location: userLocation, error: locationError, permissionStatus, isLoading: locationLoading } = useLocation();
+  const { toast } = useToast();
+  const { 
+    location: userLocation, 
+    permissionStatus, 
+    isLoading: locationLoading, 
+    setManualLocation,
+    isManual 
+  } = useLocation();
+  
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [search, setSearch] = useState("");
   const [isOnline, setIsOnline] = useState(true);
   const [greeting, setGreeting] = useState("Hello");
+  
+  // Manual Location Search State
+  const [locQuery, setLocQuery] = useState("");
+  const [locSuggestions, setLocSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [isLocSearching, setIsLocSearching] = useState(false);
+  const [showManualSearch, setShowManualSearch] = useState(false);
 
   const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-preview');
 
@@ -59,9 +83,37 @@ export default function Home() {
     };
   }, []);
 
+  // Manual Location Search Logic
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (locQuery.length < 3) {
+        setLocSuggestions([]);
+        return;
+      }
+      setIsLocSearching(true);
+      try {
+        const response = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(locQuery)}&limit=5`
+        );
+        const data = await response.json();
+        const mapped = data.features.map((f: any) => ({
+          name: f.properties.name || f.properties.street || "Unknown Place",
+          address: [f.properties.street, f.properties.city, f.properties.country].filter(Boolean).join(", "),
+          latitude: f.geometry.coordinates[1],
+          longitude: f.geometry.coordinates[0],
+        }));
+        setLocSuggestions(mapped);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLocSearching(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [locQuery]);
+
   const refresh = () => {
-    const data = getReminders();
-    setReminders(data);
+    setReminders(getReminders());
   };
 
   const processedReminders = reminders
@@ -80,6 +132,21 @@ export default function Home() {
       return a.distance - b.distance;
     });
 
+  const handleSelectManual = (s: AutocompleteSuggestion) => {
+    setManualLocation({
+      latitude: s.latitude,
+      longitude: s.longitude,
+      address: s.address || s.name
+    });
+    setLocQuery("");
+    setLocSuggestions([]);
+    setShowManualSearch(false);
+    toast({
+      title: "Pin Set Manually",
+      description: `Dashboard centered at ${s.name}`,
+    });
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -88,7 +155,7 @@ export default function Home() {
       className="px-6 pt-12 pb-32 min-h-screen"
     >
       <header className="flex justify-between items-start mb-8">
-        <div>
+        <div className="flex-1 pr-4">
           <motion.p 
             initial={{ opacity: 0, x: -5 }}
             animate={{ opacity: 1, x: 0 }}
@@ -96,45 +163,74 @@ export default function Home() {
           >
             {greeting}, explorer
           </motion.p>
-          <h1 className="text-3xl font-headline font-bold text-foreground tracking-tight">
-            Near<span className="text-primary">Remind</span>
+          <h1 className="text-3xl font-headline font-bold text-foreground tracking-tight line-clamp-2">
+            {isManual ? <span className="text-primary italic">Manual Pin</span> : "NearRemind"}
           </h1>
+          {userLocation && (
+            <p className="text-[10px] font-bold text-muted-foreground mt-1 line-clamp-1 uppercase tracking-tighter">
+              {userLocation.address}
+            </p>
+          )}
         </div>
         <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow hover:bg-primary/5 hover:text-primary transition-all">
           <Bell size={18} className="text-muted-foreground" />
         </Button>
       </header>
 
-      <AnimatePresence>
-        {permissionStatus === 'denied' && (
+      <AnimatePresence mode="wait">
+        {permissionStatus === 'denied' && !isManual && (
           <motion.div 
+            key="denial-alert"
             initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
             animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
             exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
             className="overflow-hidden"
           >
-            <Alert className="bg-primary/5 border-primary/20 text-primary rounded-2xl border shadow-sm">
+            <Alert className="bg-primary/5 border-primary/20 text-primary rounded-3xl border shadow-sm p-6">
               <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle className="font-bold text-xs uppercase tracking-widest">Location Restricted</AlertTitle>
-              <AlertDescription className="text-[11px] font-medium opacity-90 leading-relaxed">
-                Live tracking is disabled. Please grant permission in your browser settings to see nearby reminders.
-              </AlertDescription>
-            </Alert>
-          </motion.div>
-        )}
-        {!isOnline && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
-            animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
-            exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
-            className="overflow-hidden"
-          >
-            <Alert className="bg-muted border-border/50 rounded-2xl">
-              <WifiOff className="h-4 w-4" />
-              <AlertTitle className="font-bold">Offline Mode</AlertTitle>
-              <AlertDescription className="text-xs">
-                Saved reminders still work, but you can&apos;t search for new locations.
-              </AlertDescription>
+              <div className="space-y-4 w-full">
+                <div>
+                  <AlertTitle className="font-bold text-xs uppercase tracking-widest mb-1">Signal Blocked</AlertTitle>
+                  <AlertDescription className="text-[11px] font-medium opacity-90 leading-relaxed">
+                    Live GPS is disabled. You can grant browser permission or set your location manually to see nearby tasks.
+                  </AlertDescription>
+                </div>
+                
+                <div className="relative">
+                  <Input 
+                    placeholder="Search city or street..."
+                    value={locQuery}
+                    onChange={(e) => setLocQuery(e.target.value)}
+                    className="bg-background/50 border-primary/20 h-10 rounded-xl text-xs pl-9 focus-visible:ring-primary"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/40" size={14} />
+                  {isLocSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary/40" size={14} />}
+                </div>
+
+                <AnimatePresence>
+                  {locSuggestions.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-1"
+                    >
+                      {locSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSelectManual(s)}
+                          className="w-full text-left p-3 hover:bg-primary/10 rounded-xl flex items-center gap-3 transition-colors border border-primary/5"
+                        >
+                          <MapPin size={12} className="shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold truncate">{s.name}</p>
+                            <p className="text-[9px] opacity-60 truncate">{s.address}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </Alert>
           </motion.div>
         )}
@@ -142,11 +238,13 @@ export default function Home() {
 
       <section className="mb-10 space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Live Signal</h2>
+          <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+            {isManual ? "Manual Pivot" : "Live Signal"}
+          </h2>
           <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-primary/40'} ${locationLoading ? 'animate-pulse' : ''}`} />
-            <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-              {locationLoading ? "Searching..." : userLocation ? "Active" : "Offline"}
+            <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-primary shadow-[0_0_8px_rgba(124,58,237,0.4)]' : 'bg-primary/40'} ${locationLoading ? 'animate-pulse' : ''}`} />
+            <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">
+              {locationLoading ? "Searching..." : userLocation ? (isManual ? "Static Pin" : "Active GPS") : "Signal Lost"}
             </span>
           </div>
         </div>
@@ -173,11 +271,11 @@ export default function Home() {
                   className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 w-full max-w-[90%]"
                 >
                   <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary shrink-0">
-                    <Target size={22} className="animate-pulse" />
+                    {isManual ? <TargetIcon size={22} /> : <Target size={22} className="animate-pulse" />}
                   </div>
                   <div className="text-center w-full">
                     <p className="text-sm font-bold text-foreground line-clamp-2 leading-tight">
-                      {userLocation.address || "Detecting Street..."}
+                      {userLocation.address || "Target Location"}
                     </p>
                     <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-2 uppercase tracking-tight">
                       <span>{userLocation.latitude.toFixed(4)}°N</span>
