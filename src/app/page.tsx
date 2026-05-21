@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,7 +7,7 @@ import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff } from "lucide-react";
+import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
@@ -27,7 +26,6 @@ export default function Home() {
     refresh();
     setIsOnline(navigator.onLine);
     
-    // Time-based greeting logic
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
@@ -99,8 +97,8 @@ export default function Home() {
                   className="flex items-center gap-1.5 ml-3.5"
                 >
                   <MapPin size={10} className="text-primary/60" />
-                  <p className="text-[9px] font-medium text-muted-foreground/80 tracking-tight">
-                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                  <p className="text-[9px] font-bold text-primary tracking-tight">
+                    {userLocation.address || "Detecting Location..."}
                   </p>
                 </motion.div>
               )}

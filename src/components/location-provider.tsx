@@ -24,8 +24,40 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | 'loading'>('loading');
   const [isLoading, setIsLoading] = useState(true);
   
-  // Track notified reminders independently with timestamps to handle the 1-hour cooldown
+  // Track notified reminders independently with timestamps
   const notifiedReminders = useRef<Record<string, number>>({});
+  const lastGeocoded = useRef<{ lat: number; lon: number; time: number } | null>(null);
+
+  const fetchReverseGeocode = async (lat: number, lon: number): Promise<string> => {
+    try {
+      // Avoid excessive geocoding if we haven't moved much (less than 100m) or geocoded in the last minute
+      if (lastGeocoded.current) {
+        const dist = calculateDistance(lat, lon, lastGeocoded.current.lat, lastGeocoded.current.lon);
+        const timeDiff = Date.now() - lastGeocoded.current.time;
+        if (dist < 100 && timeDiff < 60000) {
+          return location?.address || "Current Location";
+        }
+      }
+
+      const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const props = data.features[0].properties;
+        const parts = [
+          props.name,
+          props.city || props.town || props.village,
+          props.state || props.country
+        ].filter(Boolean);
+        
+        lastGeocoded.current = { lat, lon, time: Date.now() };
+        return parts.slice(0, 2).join(", ") || "Current Position";
+      }
+    } catch (err) {
+      console.warn("Reverse geocoding failed", err);
+    }
+    return "Current Position";
+  };
 
   const triggerNotification = (reminder: Reminder) => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -35,7 +67,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       
       new Notification("NearRemind Alert!", {
         body: `You're near ${locationLabel} — don't forget: ${reminder.title}!`,
-        tag: reminder.id, // Grouping by reminder ID ensures they don't overwrite each other if multiple fire
+        tag: reminder.id,
         requireInteraction: true,
       });
     }
@@ -45,7 +77,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     const reminders = getReminders();
     const now = Date.now();
     
-    // Each reminder is checked independently
     reminders.forEach(reminder => {
       if (!reminder.isActive) {
         delete notifiedReminders.current[reminder.id];
@@ -61,16 +92,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       const lastNotified = notifiedReminders.current[reminder.id];
 
       if (isInside) {
-        // Cooldown check allows multiple distinct reminders to fire even if their circles overlap
         if (!lastNotified || (now - lastNotified > NOTIFICATION_COOLDOWN)) {
           triggerNotification(reminder);
           notifiedReminders.current[reminder.id] = now;
         }
       }
     });
-  }, []);
+  }, [location?.address]);
 
-  const updateLocation = useCallback(() => {
+  const updateLocation = useCallback(async () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
       setIsLoading(false);
@@ -78,11 +108,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
         const newLoc = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          address: "Current Location"
+          address
         };
         setLocation(newLoc);
         checkProximity(newLoc);
@@ -90,9 +121,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       },
       (err) => {
-        // Handle specific error codes for better UX
-        if (err.code === 1) { // PERMISSION_DENIED
-          setError("Location access was denied. We need this to trigger your reminders nearby.");
+        if (err.code === 1) {
+          setError("Location access denied.");
           setPermissionStatus('denied');
         } else {
           setError(err.message);
@@ -101,17 +131,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
-  }, [checkProximity]);
+  }, [checkProximity, location?.address]);
 
   useEffect(() => {
-    // Request notification permission
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
       }
     }
 
-    // Check permission state for geolocation
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
         setPermissionStatus(result.state);
@@ -121,15 +149,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     updateLocation();
     
-    // Background-like behavior: even if tab is in background, interval and watchPosition continue
     const pollId = setInterval(updateLocation, 30000);
 
     const watchId = navigator.geolocation.watchPosition(
-      (position) => {
+      async (position) => {
+        const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
         const newLoc = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          address: "Current Location"
+          address
         };
         setLocation(newLoc);
         checkProximity(newLoc);
