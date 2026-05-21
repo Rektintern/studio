@@ -7,6 +7,7 @@ import type { Reminder } from "@/lib/types";
 import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
+import { NearbySuggestions } from "@/components/reminders/NearbySuggestions";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { 
   MapPin, 
@@ -285,6 +286,13 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {userLocation && processedReminders.length > 0 && (
+        <NearbySuggestions 
+          userLocation={userLocation} 
+          reminders={processedReminders} 
+        />
+      )}
 
       <div className="relative mb-8 group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
