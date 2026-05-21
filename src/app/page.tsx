@@ -1,13 +1,27 @@
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Reminder } from "@/lib/types";
 import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff, Target, Navigation, Loader2 } from "lucide-react";
+import { 
+  MapPin, 
+  Search, 
+  Bell, 
+  Ghost, 
+  Plus, 
+  Filter, 
+  AlertCircle, 
+  WifiOff, 
+  Target, 
+  Navigation, 
+  Loader2,
+  Activity
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
@@ -16,6 +30,19 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Card } from "@/components/ui/card";
+import { 
+  ScatterChart, 
+  Scatter, 
+  XAxis, 
+  YAxis, 
+  ZAxis, 
+  Tooltip, 
+  ResponsiveContainer,
+  ReferenceLine,
+  ReferenceDot,
+  Cell
+} from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 export default function Home() {
   const router = useRouter();
@@ -66,6 +93,29 @@ export default function Home() {
       if (b.distance === undefined) return -1;
       return a.distance - b.distance;
     });
+
+  // Prepare data for the "Chart Map" (Spatial Radar)
+  const radarData = useMemo(() => {
+    return processedReminders
+      .filter(r => r.distance !== undefined && r.isActive)
+      .map(r => {
+        // Generate a stable visual angle based on ID so they don't jump around
+        const seed = r.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const angle = (seed % 360) * (Math.PI / 180);
+        const dist = r.distance || 0;
+        
+        return {
+          name: r.title,
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          z: r.radius,
+          distance: dist,
+          isActive: r.isActive
+        };
+      });
+  }, [processedReminders]);
+
+  const maxRange = Math.max(...radarData.map(d => d.distance), 1000);
 
   return (
     <motion.div 
@@ -138,53 +188,106 @@ export default function Home() {
           </div>
         </div>
 
-        <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group">
-          {mapPlaceholder && (
-            <Image 
-              src={mapPlaceholder.imageUrl}
-              alt={mapPlaceholder.description}
-              fill
-              className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale group-hover:scale-105 transition-transform duration-700"
-              data-ai-hint={mapPlaceholder.imageHint}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-          
-          <div className="absolute inset-0 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              {userLocation ? (
-                <motion.div 
-                  key="loc-active"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 max-w-[80%]"
-                >
-                  <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
-                    <Target size={22} className="animate-pulse" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-foreground line-clamp-1">{userLocation.address || "Detecting Street..."}</p>
-                    <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-1 uppercase tracking-tight">
-                      <span>{userLocation.latitude.toFixed(4)}°N</span>
-                      <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-                      <span>{userLocation.longitude.toFixed(4)}°W</span>
+        <div className="grid grid-cols-1 gap-4">
+          {/* Geocode Address Card */}
+          <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group">
+            {mapPlaceholder && (
+              <Image 
+                src={mapPlaceholder.imageUrl}
+                alt={mapPlaceholder.description}
+                fill
+                className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale group-hover:scale-105 transition-transform duration-700"
+                data-ai-hint={mapPlaceholder.imageHint}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+            
+            <div className="absolute inset-0 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                {userLocation ? (
+                  <motion.div 
+                    key="loc-active"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 max-w-[80%]"
+                  >
+                    <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
+                      <Target size={22} className="animate-pulse" />
                     </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="loc-searching"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center gap-3 text-muted-foreground/60"
-                >
-                  <Navigation size={32} className="animate-bounce" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Waiting for Signal</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </Card>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-foreground line-clamp-1">{userLocation.address || "Detecting Street..."}</p>
+                      <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-1 uppercase tracking-tight">
+                        <span>{userLocation.latitude.toFixed(4)}°N</span>
+                        <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+                        <span>{userLocation.longitude.toFixed(4)}°W</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="loc-searching"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center gap-3 text-muted-foreground/60"
+                  >
+                    <Navigation size={32} className="animate-bounce" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Waiting for Signal</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </Card>
+
+          {/* Spatial Radar Chart Map */}
+          {userLocation && radarData.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Spatial Radar</h2>
+                <Activity size={14} className="text-primary animate-pulse" />
+              </div>
+              <Card className="p-4 bg-card border-none native-shadow rounded-3xl overflow-hidden h-[240px]">
+                <ChartContainer config={{}} className="h-full w-full">
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <XAxis type="number" dataKey="x" hide domain={[-maxRange, maxRange]} />
+                    <YAxis type="number" dataKey="y" hide domain={[-maxRange, maxRange]} />
+                    <ZAxis type="number" dataKey="z" range={[50, 400]} />
+                    <Tooltip content={<ChartTooltipContent hideLabel />} cursor={{ strokeDasharray: '3 3' }} />
+                    
+                    {/* Compass Rings */}
+                    <ReferenceDot x={0} y={0} r={maxRange * 0.33} fill="none" stroke="hsl(var(--primary))" strokeOpacity={0.05} />
+                    <ReferenceDot x={0} y={0} r={maxRange * 0.66} fill="none" stroke="hsl(var(--primary))" strokeOpacity={0.05} />
+                    <ReferenceLine x={0} stroke="hsl(var(--primary))" strokeOpacity={0.1} strokeDasharray="3 3" />
+                    <ReferenceLine y={0} stroke="hsl(var(--primary))" strokeOpacity={0.1} strokeDasharray="3 3" />
+
+                    {/* User Center */}
+                    <ReferenceDot 
+                      x={0} y={0} 
+                      r={5} 
+                      fill="hsl(var(--primary))" 
+                      stroke="white" 
+                      strokeWidth={2}
+                      isFront
+                    />
+
+                    <Scatter name="Reminders" data={radarData}>
+                      {radarData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill="hsl(var(--primary))" fillOpacity={0.6} />
+                      ))}
+                    </Scatter>
+                  </ScatterChart>
+                </ChartContainer>
+                <div className="flex justify-between px-2 text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest -mt-2">
+                  <span>Target Range: {Math.round(maxRange)}m</span>
+                  <span>Relative Position</span>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </div>
       </section>
 
       <div className="relative mb-8 group">
