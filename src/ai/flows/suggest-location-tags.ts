@@ -1,11 +1,10 @@
+
 'use server';
 /**
  * @fileOverview This file implements a Genkit flow that suggests relevant location tags
- * for a reminder based on its content using AI.
+ * for a reminder based on its content using AI. It prioritizes real-world POI categories.
  *
  * - suggestLocationTags - A function that triggers the AI to suggest location tags.
- * - SuggestLocationTagsInput - The input type for the suggestLocationTags function.
- * - SuggestLocationTagsOutput - The return type for the suggestLocationTags function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -24,7 +23,7 @@ const SuggestLocationTagsOutputSchema = z.object({
   tags: z
     .array(z.string())
     .describe(
-      "An array of suggested location tags derived from the reminder content."
+      "An array of suggested location tags. Tags must correspond to real-world business categories (e.g. 'supermarket', 'cafe', 'dry cleaning')."
     ),
 });
 export type SuggestLocationTagsOutput = z.infer<
@@ -41,27 +40,29 @@ const prompt = ai.definePrompt({
   name: 'suggestLocationTagsPrompt',
   input: {schema: SuggestLocationTagsInputSchema},
   output: {schema: SuggestLocationTagsOutputSchema},
-  prompt: `You are an AI assistant that extracts relevant location tags from reminder content.
-Analyze the following reminder content and identify potential location tags.
-These tags should be short, descriptive, and directly related to places or types of locations mentioned or implied in the reminder.
-If no explicit location is mentioned, suggest general location types that might be relevant based on the reminder's intent.
+  prompt: `You are an AI assistant that extracts relevant real-world business categories from reminder content.
+Analyze the following reminder content and identify potential search terms for a map API.
+These tags should be specific POI (Point of Interest) categories. 
 
-Reminder Content: "{{{reminderContent}}}"
-
-Please provide the output as a JSON object with a single field, 'tags', which is an array of strings.
+CRITICAL: Do not use vague terms like "store" or "place". Use specific categories that a map search engine would understand.
 
 Example:
 Input: "Pick up dry cleaning on the way home"
-Output: { "tags": ["dry cleaning", "home", "laundry"]
-}
+Output: { "tags": ["dry cleaning", "laundry"] }
 
 Input: "Buy groceries for dinner"
-Output: { "tags": ["grocery store", "supermarket", "home"]
-}
+Output: { "tags": ["supermarket", "grocery store", "food shop"] }
 
 Input: "Meeting with John at the coffee shop"
-Output: { "tags": ["coffee shop", "cafe", "meeting place"]
-}
+Output: { "tags": ["cafe", "coffee shop", "restaurant"] }
+
+Input: "Get some chocolate from the store"
+Output: { "tags": ["candy shop", "supermarket", "grocery store"] }
+
+Input: "Buy a hammer"
+Output: { "tags": ["hardware store", "diy shop"] }
+
+Reminder Content: "{{{reminderContent}}}"
 `,
 });
 

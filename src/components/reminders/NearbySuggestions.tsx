@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SuggestedPlace, Reminder, Location } from "@/lib/types";
 import { calculateDistance, formatDistance } from "@/lib/geo";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,7 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
   const [suggestions, setSuggestions] = useState<SuggestedPlace[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const lastRequestTime = useRef<number>(0);
 
   useEffect(() => {
     // Get the most relevant tag from the nearest active reminders
@@ -26,41 +28,68 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
       return;
     }
 
+    // Filter out generic tags like "home" or "work" that won't yield good POI results
     const firstReminder = activeReminders[0];
-    const tagToSearch = firstReminder.tags[0] || firstReminder.title.split(' ')[0];
+    const tagToSearch = firstReminder.tags.find(t => !['home', 'work', 'my place'].includes(t.toLowerCase())) 
+                       || firstReminder.title.split(' ')[0];
     
     if (!tagToSearch || tagToSearch === activeTag) return;
 
     const fetchNearby = async () => {
+      // Respect Nominatim's 1 request per second policy
+      const now = Date.now();
+      const timeSinceLast = now - lastRequestTime.current;
+      if (timeSinceLast < 1000) {
+        await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceLast));
+      }
+
       setLoading(true);
       setActiveTag(tagToSearch);
+      lastRequestTime.current = Date.now();
+
       try {
-        // Increase limit to 15 so we can filter for proximity client-side
+        // Calculate a bounding box for ~1km (roughly 0.009 degrees lat/lon)
+        const offset = 0.01; 
+        const viewbox = `${userLocation.longitude - offset},${userLocation.latitude + offset},${userLocation.longitude + offset},${userLocation.latitude - offset}`;
+        
+        // Using Nominatim with bounded search to strictly limit to the current area
         const response = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(tagToSearch)}&lat=${userLocation.latitude}&lon=${userLocation.longitude}&limit=15`
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(tagToSearch)}&format=json&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`,
+          {
+            headers: {
+              'Accept-Language': 'en'
+            }
+          }
         );
+        
         const data = await response.json();
         
-        const places: SuggestedPlace[] = data.features
-          .map((f: any) => {
-            const coords = f.geometry.coordinates;
+        if (!Array.isArray(data)) {
+          setSuggestions([]);
+          return;
+        }
+
+        const places: SuggestedPlace[] = data
+          .map((item: any) => {
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
             const dist = calculateDistance(
               userLocation.latitude, userLocation.longitude,
-              coords[1], coords[0]
+              lat, lon
             );
+            
             return {
-              name: f.properties.name || f.properties.street || "Nearby Spot",
-              address: [f.properties.street, f.properties.city].filter(Boolean).join(", "),
+              name: item.display_name.split(',')[0] || "Nearby Spot",
+              address: item.display_name.split(',').slice(1, 3).join(',').trim(),
               distance: dist,
-              latitude: coords[1],
-              longitude: coords[0],
-              type: f.properties.osm_value
+              latitude: lat,
+              longitude: lon,
+              type: item.type || item.class || 'Spot'
             };
           })
-          // STRICT FILTER: Only show locations within 1km (1000 meters)
-          .filter((place: SuggestedPlace) => place.distance <= 1000)
+          // Extra safety check for 1km
+          .filter((place: SuggestedPlace) => place.distance <= 1200)
           .sort((a: SuggestedPlace, b: SuggestedPlace) => a.distance - b.distance)
-          // Show only top 5 closest within that 1km
           .slice(0, 5);
 
         setSuggestions(places);
