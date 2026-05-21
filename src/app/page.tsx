@@ -90,6 +90,21 @@ export default function Home() {
                 {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking Active" : "Signal Offline"}
               </p>
             </div>
+            <AnimatePresence>
+              {userLocation && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex items-center gap-1.5 ml-3.5"
+                >
+                  <MapPin size={10} className="text-primary/60" />
+                  <p className="text-[9px] font-medium text-muted-foreground/80 tracking-tight">
+                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
         <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow hover:bg-primary/5 hover:text-primary transition-all">
