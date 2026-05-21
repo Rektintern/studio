@@ -41,7 +41,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Using BigDataCloud's Free Client-Side Reverse Geocoding API
-      // It provides very high quality "locality" data (neighborhoods, districts)
       const response = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
       );
@@ -50,11 +49,16 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         lastGeocoded.current = { lat, lon, time: Date.now() };
         
-        // Construct a human-readable name: Neighborhood/District + City
-        const locality = data.locality || data.city || data.principalSubdivision;
-        const city = data.city && data.city !== data.locality ? data.city : "";
+        // Construct a full, human-readable address
+        const neighborhood = data.locality;
+        const city = data.city;
+        const region = data.principalSubdivision;
+        const country = data.countryName;
         
-        const parts = [locality, city].filter(Boolean);
+        // Filter out duplicates and join parts
+        const parts = Array.from(new Set([neighborhood, city, region, country]))
+          .filter(Boolean);
+          
         return parts.join(", ") || "Current Position";
       }
     } catch (err) {

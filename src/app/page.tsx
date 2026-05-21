@@ -94,12 +94,10 @@ export default function Home() {
       return a.distance - b.distance;
     });
 
-  // Prepare data for the "Chart Map" (Spatial Radar)
   const radarData = useMemo(() => {
     return processedReminders
       .filter(r => r.distance !== undefined && r.isActive)
       .map(r => {
-        // Generate a stable visual angle based on ID so they don't jump around
         const seed = r.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
         const angle = (seed % 360) * (Math.PI / 180);
         const dist = r.distance || 0;
@@ -189,7 +187,6 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {/* Geocode Address Card */}
           <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group">
             {mapPlaceholder && (
               <Image 
@@ -202,21 +199,23 @@ export default function Home() {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
             
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center p-4">
               <AnimatePresence mode="wait">
                 {userLocation ? (
                   <motion.div 
                     key="loc-active"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 max-w-[80%]"
+                    className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 w-full max-w-[90%]"
                   >
-                    <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
+                    <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary shrink-0">
                       <Target size={22} className="animate-pulse" />
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-bold text-foreground line-clamp-1">{userLocation.address || "Detecting Street..."}</p>
-                      <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-1 uppercase tracking-tight">
+                    <div className="text-center w-full">
+                      <p className="text-sm font-bold text-foreground line-clamp-2 leading-tight">
+                        {userLocation.address || "Detecting Street..."}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-2 uppercase tracking-tight">
                         <span>{userLocation.latitude.toFixed(4)}°N</span>
                         <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
                         <span>{userLocation.longitude.toFixed(4)}°W</span>
@@ -238,7 +237,6 @@ export default function Home() {
             </div>
           </Card>
 
-          {/* Spatial Radar Chart Map */}
           {userLocation && radarData.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -257,13 +255,11 @@ export default function Home() {
                     <ZAxis type="number" dataKey="z" range={[50, 400]} />
                     <Tooltip content={<ChartTooltipContent hideLabel />} cursor={{ strokeDasharray: '3 3' }} />
                     
-                    {/* Compass Rings */}
                     <ReferenceDot x={0} y={0} r={maxRange * 0.33} fill="none" stroke="hsl(var(--primary))" strokeOpacity={0.05} />
                     <ReferenceDot x={0} y={0} r={maxRange * 0.66} fill="none" stroke="hsl(var(--primary))" strokeOpacity={0.05} />
                     <ReferenceLine x={0} stroke="hsl(var(--primary))" strokeOpacity={0.1} strokeDasharray="3 3" />
                     <ReferenceLine y={0} stroke="hsl(var(--primary))" strokeOpacity={0.1} strokeDasharray="3 3" />
 
-                    {/* User Center */}
                     <ReferenceDot 
                       x={0} y={0} 
                       r={5} 
