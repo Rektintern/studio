@@ -99,8 +99,13 @@ export default function Home() {
 
       <AnimatePresence>
         {permissionStatus === 'denied' && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6">
-            <Alert className="bg-primary/10 border-primary/20 text-primary rounded-2xl border-none shadow-sm">
+          <motion.div 
+            initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
+            animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
+            exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
+            className="overflow-hidden"
+          >
+            <Alert className="bg-primary/5 border-primary/20 text-primary rounded-2xl border shadow-sm">
               <AlertCircle className="h-4 w-4 text-primary" />
               <AlertTitle className="font-bold">Location Disabled</AlertTitle>
               <AlertDescription className="text-xs font-medium opacity-90">
@@ -110,7 +115,12 @@ export default function Home() {
           </motion.div>
         )}
         {!isOnline && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mb-6">
+          <motion.div 
+            initial={{ height: 0, opacity: 0, marginBottom: 0 }} 
+            animate={{ height: 'auto', opacity: 1, marginBottom: 24 }} 
+            exit={{ height: 0, opacity: 0, marginBottom: 0 }} 
+            className="overflow-hidden"
+          >
             <Alert className="bg-muted border-border/50 rounded-2xl">
               <WifiOff className="h-4 w-4" />
               <AlertTitle className="font-bold">Offline Mode</AlertTitle>

@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ChevronLeft, Shield, Bell, Zap, Map, Info, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "@/components/location-provider";
 
 export default function Settings() {
@@ -30,21 +30,30 @@ export default function Settings() {
       </header>
 
       <div className="space-y-10">
-        {permissionStatus === 'denied' && (
-          <Card className="p-6 bg-primary/10 border-none rounded-3xl shadow-sm">
-            <div className="flex gap-4">
-              <div className="p-2 bg-primary/20 rounded-xl h-fit">
-                <AlertCircle className="text-primary" size={20} />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-sm text-primary">Tracking Restricted</h3>
-                <p className="text-[11px] text-primary/80 leading-relaxed font-medium">
-                  Your browser has blocked location access. Please enable it in your browser settings and refresh the page to use geofencing.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
+        <AnimatePresence>
+          {permissionStatus === 'denied' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 40 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="p-6 bg-primary/5 border border-primary/10 rounded-3xl shadow-sm">
+                <div className="flex gap-4">
+                  <div className="p-2 bg-primary/10 rounded-xl h-fit">
+                    <AlertCircle className="text-primary" size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-sm text-primary">Tracking Restricted</h3>
+                    <p className="text-[11px] text-primary/80 leading-relaxed font-medium">
+                      Your browser has blocked location access. Please enable it in your browser settings and refresh the page to use geofencing.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">

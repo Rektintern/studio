@@ -30,6 +30,7 @@ import { useLocation } from "@/components/location-provider";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { motion, AnimatePresence } from "framer-motion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface AutocompleteSuggestion {
   name: string;
@@ -41,7 +42,7 @@ interface AutocompleteSuggestion {
 export default function AddReminder() {
   const router = useRouter();
   const { toast } = useToast();
-  const { location: currentLoc, isLoading: isLocLoading } = useLocation();
+  const { location: currentLoc, isLoading: isLocLoading, permissionStatus } = useLocation();
   
   const [title, setTitle] = useState("");
   const [radius, setRadius] = useState([200]);
@@ -183,6 +184,25 @@ export default function AddReminder() {
       </header>
 
       <div className="space-y-10">
+        <AnimatePresence>
+          {permissionStatus === 'denied' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              className="overflow-hidden"
+            >
+              <Alert className="bg-primary/5 border border-primary/20 text-primary rounded-2xl">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertTitle className="font-bold text-xs uppercase tracking-wider">Location Locked</AlertTitle>
+                <AlertDescription className="text-[11px] font-medium opacity-80 leading-relaxed">
+                  "Current Location" is disabled. Please grant permission in your browser settings.
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <section className="space-y-3">
           <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Task Details</Label>
           <div className="relative">
