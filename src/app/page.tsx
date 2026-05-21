@@ -7,12 +7,15 @@ import { getReminders } from "@/lib/store";
 import { calculateDistance } from "@/lib/geo";
 import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff, Loader2 } from "lucide-react";
+import { MapPin, Search, Bell, Ghost, Plus, Filter, AlertCircle, WifiOff, Target, Navigation, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Card } from "@/components/ui/card";
 
 export default function Home() {
   const router = useRouter();
@@ -21,6 +24,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [isOnline, setIsOnline] = useState(true);
   const [greeting, setGreeting] = useState("Hello");
+
+  const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-preview');
 
   useEffect(() => {
     refresh();
@@ -81,29 +86,6 @@ export default function Home() {
           <h1 className="text-3xl font-headline font-bold text-foreground tracking-tight">
             Near<span className="text-primary">Remind</span>
           </h1>
-          <div className="flex flex-col gap-1 mt-1.5">
-            <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-primary/40'} ${locationLoading ? 'animate-pulse' : ''}`} />
-              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                {locationLoading ? "Searching Signal..." : userLocation ? "Live Tracking Active" : "Signal Offline"}
-              </p>
-            </div>
-            <AnimatePresence>
-              {userLocation && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-1.5 ml-3.5"
-                >
-                  <MapPin size={10} className="text-primary/60" />
-                  <p className="text-[9px] font-bold text-primary tracking-tight">
-                    {userLocation.address || "Detecting Location..."}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
         <Button variant="outline" size="icon" className="rounded-2xl border-border/60 bg-card native-shadow hover:bg-primary/5 hover:text-primary transition-all">
           <Bell size={18} className="text-muted-foreground" />
@@ -120,9 +102,9 @@ export default function Home() {
           >
             <Alert className="bg-primary/5 border-primary/20 text-primary rounded-2xl border shadow-sm">
               <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle className="font-bold">Location Disabled</AlertTitle>
-              <AlertDescription className="text-xs font-medium opacity-90">
-                We can&apos;t notify you nearby. Please enable location in your browser settings.
+              <AlertTitle className="font-bold text-xs uppercase tracking-widest">Location Restricted</AlertTitle>
+              <AlertDescription className="text-[11px] font-medium opacity-90 leading-relaxed">
+                Live tracking is disabled. Please grant permission in your browser settings to see nearby reminders.
               </AlertDescription>
             </Alert>
           </motion.div>
@@ -145,10 +127,70 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      <section className="mb-10 space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Live Signal</h2>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${userLocation ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-primary/40'} ${locationLoading ? 'animate-pulse' : ''}`} />
+            <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+              {locationLoading ? "Searching..." : userLocation ? "Active" : "Offline"}
+            </span>
+          </div>
+        </div>
+
+        <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group">
+          {mapPlaceholder && (
+            <Image 
+              src={mapPlaceholder.imageUrl}
+              alt={mapPlaceholder.description}
+              fill
+              className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale group-hover:scale-105 transition-transform duration-700"
+              data-ai-hint={mapPlaceholder.imageHint}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+          
+          <div className="absolute inset-0 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              {userLocation ? (
+                <motion.div 
+                  key="loc-active"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 max-w-[80%]"
+                >
+                  <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
+                    <Target size={22} className="animate-pulse" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-foreground line-clamp-1">{userLocation.address || "Detecting Street..."}</p>
+                    <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground mt-1 uppercase tracking-tight">
+                      <span>{userLocation.latitude.toFixed(4)}°N</span>
+                      <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+                      <span>{userLocation.longitude.toFixed(4)}°W</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="loc-searching"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center gap-3 text-muted-foreground/60"
+                >
+                  <Navigation size={32} className="animate-bounce" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Waiting for Signal</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </Card>
+      </section>
+
       <div className="relative mb-8 group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" size={18} />
         <Input 
-          placeholder="Search locations..." 
+          placeholder="Filter nearby tasks..." 
           className="pl-12 h-14 bg-card border-border/40 rounded-2xl native-shadow transition-all focus-visible:ring-primary focus-visible:border-primary/50 text-base"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -163,7 +205,7 @@ export default function Home() {
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-headline font-bold text-foreground/80 uppercase tracking-widest">
-            Nearby Tasks
+            Proximity List
           </h2>
           <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
             {processedReminders.length} ACTIVE
@@ -186,7 +228,7 @@ export default function Home() {
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center py-24 text-center"
+                className="flex flex-col items-center justify-center py-20 text-center"
               >
                 <div className="relative mb-6">
                   <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
