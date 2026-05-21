@@ -16,43 +16,52 @@ interface NearbySuggestionsProps {
 export function NearbySuggestions({ userLocation, reminders }: NearbySuggestionsProps) {
   const [suggestions, setSuggestions] = useState<SuggestedPlace[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTagsHash, setActiveTagsHash] = useState<string>("");
   const lastRequestTime = useRef<number>(0);
   const lastLocation = useRef<Location | null>(null);
 
-  const fetchNearby = async (tag: string, force = false) => {
-    // Basic debounce/rate limit for OSM
+  const fetchNearbyForTags = async (tags: string[], force = false) => {
     const now = Date.now();
     if (!force && now - lastRequestTime.current < 2000) return;
 
     setLoading(true);
-    setActiveTag(tag);
     lastRequestTime.current = now;
     lastLocation.current = userLocation;
 
     try {
-      // 1km bounding box calculation (~0.009 deg)
       const offset = 0.012; 
       const viewbox = `${userLocation.longitude - offset},${userLocation.latitude + offset},${userLocation.longitude + offset},${userLocation.latitude - offset}`;
       
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(tag)}&format=json&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'NearRemind-App/1.0',
-            'Accept-Language': 'en'
-          }
+      // Fetch for all tags in parallel
+      const fetchPromises = tags.map(async (tag) => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(tag)}&format=json&viewbox=${viewbox}&bounded=1&limit=5&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'NearRemind-App/1.0',
+                'Accept-Language': 'en'
+              }
+            }
+          );
+          return await response.json();
+        } catch (e) {
+          console.error(`Failed to fetch for tag: ${tag}`, e);
+          return [];
         }
-      );
+      });
+
+      const results = await Promise.all(fetchPromises);
+      const flatData = results.flat();
       
-      const data = await response.json();
-      
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!Array.isArray(flatData) || flatData.length === 0) {
         setSuggestions([]);
         return;
       }
 
-      const places: SuggestedPlace[] = data
+      // Process and deduplicate by coordinate
+      const seen = new Set<string>();
+      const places: SuggestedPlace[] = flatData
         .map((item: any) => {
           const lat = parseFloat(item.lat);
           const lon = parseFloat(item.lon);
@@ -70,9 +79,14 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
             type: item.type || item.class || 'Spot'
           };
         })
-        .filter((place: SuggestedPlace) => place.distance <= 1500) // Slightly generous filter
+        .filter((place: SuggestedPlace) => {
+          const key = `${place.latitude}-${place.longitude}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return place.distance <= 1500;
+        })
         .sort((a: SuggestedPlace, b: SuggestedPlace) => a.distance - b.distance)
-        .slice(0, 5);
+        .slice(0, 10);
 
       setSuggestions(places);
     } catch (err) {
@@ -86,28 +100,33 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
     const activeReminders = reminders.filter(r => r.isActive);
     if (activeReminders.length === 0) {
       setSuggestions([]);
-      setActiveTag(null);
+      setActiveTagsHash("");
       return;
     }
 
-    // Pick the first valid tag that isn't generic
-    const tagToSearch = activeReminders
-      .flatMap(r => r.tags)
-      .find(t => !['home', 'work', 'office', 'my place'].includes(t.toLowerCase())) 
-      || activeReminders[0].title.split(' ').filter(w => w.length > 3)[0];
+    // Aggregate all unique non-generic tags
+    const allTags = Array.from(new Set(
+      activeReminders.flatMap(r => r.tags)
+    )).filter(t => !['home', 'work', 'office', 'my place'].includes(t.toLowerCase()))
+    .slice(0, 5); // Limit to top 5 unique categories to avoid API spam
 
-    if (!tagToSearch) return;
+    const currentTagsHash = allTags.sort().join(',');
 
-    // Trigger if tag changed or if we've moved significantly (>100m)
-    const hasMoved = !lastLocation.current || 
-      calculateDistance(userLocation.latitude, userLocation.longitude, lastLocation.current.latitude, lastLocation.current.longitude) > 100;
-
-    if (tagToSearch !== activeTag || hasMoved) {
-      fetchNearby(tagToSearch);
+    if (allTags.length === 0) {
+      setSuggestions([]);
+      return;
     }
-  }, [reminders, userLocation, activeTag]);
 
-  if (suggestions.length === 0 && !loading && !activeTag) return null;
+    const hasMoved = !lastLocation.current || 
+      calculateDistance(userLocation.latitude, userLocation.longitude, lastLocation.current.latitude, lastLocation.current.longitude) > 150;
+
+    if (currentTagsHash !== activeTagsHash || hasMoved) {
+      setActiveTagsHash(currentTagsHash);
+      fetchNearbyForTags(allTags);
+    }
+  }, [reminders, userLocation, activeTagsHash]);
+
+  if (suggestions.length === 0 && !loading && !activeTagsHash) return null;
 
   return (
     <section className="space-y-4 mb-10">
@@ -118,13 +137,13 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
         </div>
         <div className="flex items-center gap-3">
            <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">
-             {activeTag ? `Searching: ${activeTag}` : 'Local Scan'}
+             {loading ? 'Scanning Local Map' : `${suggestions.length} Spots Found`}
            </span>
            {loading ? (
              <Loader2 className="animate-spin text-primary" size={14} />
            ) : (
              <button 
-               onClick={() => activeTag && fetchNearby(activeTag, true)}
+               onClick={() => activeTagsHash && fetchNearbyForTags(activeTagsHash.split(','), true)}
                className="text-muted-foreground/40 hover:text-primary transition-colors"
              >
                <RefreshCcw size={12} />
@@ -153,9 +172,9 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
                       <div className="p-2 rounded-xl bg-primary/10 text-primary">
                         <MapPin size={16} />
                       </div>
-                      <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[9px] font-bold py-0.5 px-2">
-                        {place.type?.replace('_', ' ') || 'Spot'}
-                      </Badge>
+                      <div className="inline-flex items-center rounded-full border border-primary/10 bg-primary/5 px-2 py-0.5 text-[9px] font-bold text-primary">
+                        {place.type?.replace(/_/g, ' ') || 'Spot'}
+                      </div>
                     </div>
                     
                     <h3 className="font-bold text-sm text-foreground line-clamp-1 mb-1">{place.name}</h3>
@@ -179,7 +198,7 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
                 </Card>
               </motion.div>
             ))
-          ) : !loading && activeTag && (
+          ) : !loading && activeTagsHash && (
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }}
@@ -188,7 +207,7 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
               <SearchX size={28} className="text-primary/30" />
               <div className="text-center">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60">No local matches</p>
-                <p className="text-[9px] text-muted-foreground/60 mt-1">Try adding more specific tags to your task.</p>
+                <p className="text-[9px] text-muted-foreground/60 mt-1">Found nothing within 1km for current tasks.</p>
               </div>
             </motion.div>
           )}
@@ -196,9 +215,4 @@ export function NearbySuggestions({ userLocation, reminders }: NearbySuggestions
       </div>
     </section>
   );
-}
-
-// Minimal Badge replacement since it might be missing in this file scope
-function Badge({ children, className, variant }: any) {
-  return <div className={className}>{children}</div>;
 }
