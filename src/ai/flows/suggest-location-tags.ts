@@ -1,8 +1,8 @@
-
 'use server';
 /**
  * @fileOverview This file implements a Genkit flow that suggests relevant location tags
- * for a reminder based on its content using AI. It prioritizes real-world POI categories.
+ * for a reminder based on its content using AI. It prioritizes real-world POI categories
+ * compatible with OpenStreetMap/Nominatim search.
  *
  * - suggestLocationTags - A function that triggers the AI to suggest location tags.
  */
@@ -23,7 +23,7 @@ const SuggestLocationTagsOutputSchema = z.object({
   tags: z
     .array(z.string())
     .describe(
-      "An array of suggested location tags. Tags must correspond to real-world business categories (e.g. 'supermarket', 'cafe', 'dry cleaning')."
+      "An array of suggested location tags. Tags must correspond to specific real-world business categories (e.g. 'supermarket', 'cafe', 'pharmacy', 'atm', 'gas station')."
     ),
 });
 export type SuggestLocationTagsOutput = z.infer<
@@ -40,27 +40,20 @@ const prompt = ai.definePrompt({
   name: 'suggestLocationTagsPrompt',
   input: {schema: SuggestLocationTagsInputSchema},
   output: {schema: SuggestLocationTagsOutputSchema},
-  prompt: `You are an AI assistant that extracts relevant real-world business categories from reminder content.
-Analyze the following reminder content and identify potential search terms for a map API.
-These tags should be specific POI (Point of Interest) categories. 
+  prompt: `You are an expert at mapping user intent to OpenStreetMap-compatible search categories.
+Analyze the reminder content and provide a list of 2-3 specific business or POI categories that a user would visit to fulfill this task.
 
-CRITICAL: Do not use vague terms like "store" or "place". Use specific categories that a map search engine would understand.
+CRITICAL RULES:
+- Use specific categories: 'pharmacy' instead of 'medicine', 'supermarket' instead of 'food', 'hardware store' instead of 'tools'.
+- Output ONLY the category names.
+- Prioritize categories that exist as physical locations on a map.
 
-Example:
-Input: "Pick up dry cleaning on the way home"
-Output: { "tags": ["dry cleaning", "laundry"] }
-
-Input: "Buy groceries for dinner"
-Output: { "tags": ["supermarket", "grocery store", "food shop"] }
-
-Input: "Meeting with John at the coffee shop"
-Output: { "tags": ["cafe", "coffee shop", "restaurant"] }
-
-Input: "Get some chocolate from the store"
-Output: { "tags": ["candy shop", "supermarket", "grocery store"] }
-
-Input: "Buy a hammer"
-Output: { "tags": ["hardware store", "diy shop"] }
+Examples:
+- "Buy milk": ["supermarket", "grocery store"]
+- "Pick up meds": ["pharmacy", "chemist"]
+- "Get cash": ["atm", "bank"]
+- "Fix car": ["car repair", "mechanic"]
+- "Coffee with Sam": ["cafe", "coffee shop"]
 
 Reminder Content: "{{{reminderContent}}}"
 `,
