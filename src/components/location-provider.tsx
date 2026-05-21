@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
@@ -30,28 +31,36 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   const fetchReverseGeocode = async (lat: number, lon: number): Promise<string> => {
     try {
-      // Avoid excessive geocoding if we haven't moved much (less than 100m) or geocoded in the last minute
+      // Avoid excessive geocoding if we haven't moved much (less than 50m) or geocoded in the last 45 seconds
       if (lastGeocoded.current) {
         const dist = calculateDistance(lat, lon, lastGeocoded.current.lat, lastGeocoded.current.lon);
         const timeDiff = Date.now() - lastGeocoded.current.time;
-        if (dist < 100 && timeDiff < 60000) {
+        if (dist < 50 && timeDiff < 45000) {
           return location?.address || "Current Location";
         }
       }
 
-      const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+      // Switching to Nominatim for better informal place names (neighborhoods, etc)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+        {
+          headers: {
+            'Accept-Language': 'en-US,en;q=0.9',
+          }
+        }
+      );
       const data = await response.json();
       
-      if (data.features && data.features.length > 0) {
-        const props = data.features[0].properties;
-        const parts = [
-          props.name,
-          props.city || props.town || props.village,
-          props.state || props.country
-        ].filter(Boolean);
+      if (data && data.address) {
+        const addr = data.address;
+        // Prioritize recognizable landmark or neighborhood names
+        const mainName = addr.amenity || addr.building || addr.neighbourhood || addr.suburb || addr.road;
+        const areaName = addr.city || addr.town || addr.village || addr.state;
+        
+        const parts = [mainName, areaName].filter(Boolean);
         
         lastGeocoded.current = { lat, lon, time: Date.now() };
-        return parts.slice(0, 2).join(", ") || "Current Position";
+        return parts.join(", ") || data.display_name?.split(',')[0] || "Current Position";
       }
     } catch (err) {
       console.warn("Reverse geocoding failed", err);
