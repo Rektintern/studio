@@ -40,27 +40,22 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Switching to Nominatim for better informal place names (neighborhoods, etc)
+      // Using BigDataCloud's Free Client-Side Reverse Geocoding API
+      // It provides very high quality "locality" data (neighborhoods, districts)
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
-        {
-          headers: {
-            'Accept-Language': 'en-US,en;q=0.9',
-          }
-        }
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
       );
       const data = await response.json();
       
-      if (data && data.address) {
-        const addr = data.address;
-        // Prioritize recognizable landmark or neighborhood names
-        const mainName = addr.amenity || addr.building || addr.neighbourhood || addr.suburb || addr.road;
-        const areaName = addr.city || addr.town || addr.village || addr.state;
-        
-        const parts = [mainName, areaName].filter(Boolean);
-        
+      if (data) {
         lastGeocoded.current = { lat, lon, time: Date.now() };
-        return parts.join(", ") || data.display_name?.split(',')[0] || "Current Position";
+        
+        // Construct a human-readable name: Neighborhood/District + City
+        const locality = data.locality || data.city || data.principalSubdivision;
+        const city = data.city && data.city !== data.locality ? data.city : "";
+        
+        const parts = [locality, city].filter(Boolean);
+        return parts.join(", ") || "Current Position";
       }
     } catch (err) {
       console.warn("Reverse geocoding failed", err);
@@ -107,7 +102,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
-  }, [location?.address]);
+  }, []);
 
   const updateLocation = useCallback(async () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -140,7 +135,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
-  }, [checkProximity, location?.address]);
+  }, [checkProximity]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
