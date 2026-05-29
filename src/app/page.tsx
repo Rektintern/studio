@@ -28,8 +28,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "@/components/location-provider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,13 +54,9 @@ export default function Home() {
   const [isOnline, setIsOnline] = useState(true);
   const [greeting, setGreeting] = useState("Hello");
   
-  // Manual Location Search State
   const [locQuery, setLocQuery] = useState("");
   const [locSuggestions, setLocSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [isLocSearching, setIsLocSearching] = useState(false);
-  const [showManualSearch, setShowManualSearch] = useState(false);
-
-  const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-preview');
 
   useEffect(() => {
     refresh();
@@ -83,7 +77,6 @@ export default function Home() {
     };
   }, []);
 
-  // Manual Location Search Logic
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (locQuery.length < 3) {
@@ -140,12 +133,18 @@ export default function Home() {
     });
     setLocQuery("");
     setLocSuggestions([]);
-    setShowManualSearch(false);
     toast({
       title: "Pin Set Manually",
       description: `Dashboard centered at ${s.name}`,
     });
   };
+
+  const osmUrl = useMemo(() => {
+    if (!userLocation) return null;
+    const delta = 0.005;
+    const { latitude: lat, longitude: lon } = userLocation;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - delta}%2C${lat - delta}%2C${lon + delta}%2C${lat + delta}&layer=mapnik&marker=${lat}%2C${lon}`;
+  }, [userLocation]);
 
   return (
     <motion.div 
@@ -249,26 +248,35 @@ export default function Home() {
           </div>
         </div>
 
-        <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group">
-          {mapPlaceholder && (
-            <Image 
-              src={mapPlaceholder.imageUrl}
-              alt={mapPlaceholder.description}
-              fill
-              className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale group-hover:scale-105 transition-transform duration-700"
-              data-ai-hint={mapPlaceholder.imageHint}
+        <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden border-none native-shadow group bg-muted">
+          {osmUrl ? (
+            <iframe
+              title="Current Location Map"
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight={0}
+              marginWidth={0}
+              src={osmUrl}
+              className="absolute inset-0 grayscale opacity-70 group-hover:grayscale-0 transition-all duration-700 contrast-125"
             />
+          ) : (
+             <div className="absolute inset-0 flex items-center justify-center">
+               <Loader2 className="animate-spin text-primary/20" size={40} />
+             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
           
-          <div className="absolute inset-0 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent pointer-events-none" />
+          
+          <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
             <AnimatePresence mode="wait">
               {userLocation ? (
                 <motion.div 
                   key="loc-active"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 w-full max-w-[90%]"
+                  className="bg-card/90 backdrop-blur-xl p-5 rounded-3xl border border-border/50 native-shadow-lg flex flex-col items-center gap-3 w-full max-w-[90%] pointer-events-auto"
                 >
                   <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary shrink-0">
                     {isManual ? <TargetIcon size={22} /> : <Target size={22} className="animate-pulse" />}

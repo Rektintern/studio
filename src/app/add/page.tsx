@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -27,8 +26,6 @@ import { suggestLocationTags } from "@/ai/flows/suggest-location-tags";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "@/components/location-provider";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { motion, AnimatePresence } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -59,8 +56,6 @@ export default function AddReminder() {
     longitude: -122.4194,
     address: "San Francisco, CA"
   });
-
-  const mapPlaceholder = PlaceHolderImages.find(img => img.id === 'map-preview');
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -168,6 +163,12 @@ export default function AddReminder() {
     saveReminder(newReminder);
     router.push("/");
   };
+
+  const osmUrl = useMemo(() => {
+    const delta = 0.005;
+    const { latitude: lat, longitude: lon } = location;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - delta}%2C${lat - delta}%2C${lon + delta}%2C${lat + delta}&layer=mapnik&marker=${lat}%2C${lon}`;
+  }, [location]);
 
   return (
     <motion.div 
@@ -316,15 +317,18 @@ export default function AddReminder() {
         <section className="space-y-4">
           <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Geofence Preview</Label>
           <div className="aspect-[16/10] bg-muted rounded-2xl border border-border/30 relative overflow-hidden flex items-center justify-center native-shadow">
-            {mapPlaceholder && (
-              <Image 
-                src={mapPlaceholder.imageUrl}
-                alt={mapPlaceholder.description}
-                fill
-                className="absolute inset-0 object-cover opacity-60 mix-blend-overlay grayscale"
-                data-ai-hint={mapPlaceholder.imageHint}
-              />
-            )}
+            <iframe
+              title="Target Location Map"
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight={0}
+              marginWidth={0}
+              src={osmUrl}
+              className="absolute inset-0 grayscale opacity-40 mix-blend-multiply"
+            />
+            
             <div className="relative z-10 flex flex-col items-center gap-4 bg-card/90 backdrop-blur-xl p-6 rounded-3xl border border-border/50 native-shadow-lg max-w-[85%]">
               <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
                 <Target size={28} />
