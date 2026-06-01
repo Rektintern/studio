@@ -45,9 +45,9 @@ export function AddFlow({ userLocation, onClose, onCreate }: AddFlowProps) {
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <div className="sheet" style={{ maxHeight: "92%" }}>
+      <div className="sheet" style={{ maxHeight: "92%", display: "flex", flexDirection: "column" }}>
         <div className="sheet-grab" />
-        <div style={{ padding: "8px 24px 30px" }}>
+        <div style={{ padding: "8px 24px 16px", overflowY: "auto", flex: 1, minHeight: 0 }}>
           {/* header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <button className="iconbtn" onClick={back} aria-label={step === 0 ? "Close" : "Back"}>
@@ -140,10 +140,12 @@ export function AddFlow({ userLocation, onClose, onCreate }: AddFlowProps) {
               </div>
             )}
           </div>
+        </div>
 
+        <div style={{ padding: "12px 24px calc(env(safe-area-inset-bottom, 0px) + 16px)", borderTop: "1px solid var(--hairline)", background: "var(--app-bg)" }}>
           <button
             className="btn btn-accent btn-block"
-            style={{ marginTop: 18, opacity: canNext ? 1 : 0.4 }}
+            style={{ opacity: canNext ? 1 : 0.4 }}
             disabled={!canNext}
             onClick={next}
           >

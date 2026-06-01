@@ -57,6 +57,26 @@ function inQuietHours(): boolean {
   return h >= 22 || h < 7;
 }
 
+/** Show a notification via the service worker (required on mobile), with a desktop fallback. */
+async function showPing(title: string, options: NotificationOptions) {
+  try {
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg) {
+        await reg.showNotification(title, options);
+        return;
+      }
+    }
+  } catch {
+    // fall through to the legacy constructor
+  }
+  try {
+    new Notification(title, options);
+  } catch {
+    // notifications unavailable in this context
+  }
+}
+
 /** Fires a local notification the moment a reminder comes into range. */
 export function useProximityPings(decorated: DecoratedReminder[], settings: Settings) {
   const fired = useRef<Record<string, number>>({});
@@ -80,15 +100,11 @@ export function useProximityPings(decorated: DecoratedReminder[], settings: Sett
       if (!shouldFire) return;
 
       fired.current[r.id] = now;
-      try {
-        new Notification("NEAR REMIND", {
-          body: `You're near ${r.nearest.name} — ${r.title}`,
-          tag: r.id,
-          silent: !settings.sound,
-        });
-      } catch {
-        // some browsers require a service worker for Notification constructor; ignore
-      }
+      void showPing("NEAR REMIND", {
+        body: `You're near ${r.nearest.name} — ${r.title}`,
+        tag: r.id,
+        silent: !settings.sound,
+      });
       if (settings.haptic && typeof navigator !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate?.(120);
       }

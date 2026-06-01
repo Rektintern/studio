@@ -25,7 +25,7 @@ import { Icon } from "@/components/near/Icon";
 import type { CategoryKey, DecoratedReminder, Reminder, Settings as SettingsType } from "@/lib/types";
 
 export default function Home() {
-  const { location, permissionStatus } = useLocation();
+  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation } = useLocation();
 
   const [hydrated, setHydrated] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
@@ -140,7 +140,14 @@ export default function Home() {
       ) : (
         <>
           {tab === "map" && (
-            <MapScreen userLocation={location} reminders={decorated} onOpen={(r) => setDetailId(r.id)} />
+            <MapScreen
+              userLocation={location}
+              reminders={decorated}
+              onOpen={(r) => setDetailId(r.id)}
+              locating={locating}
+              locationError={locationError}
+              onEnableLocation={refreshLocation}
+            />
           )}
           {tab === "feed" && (
             <Feed reminders={decorated} onOpen={(r) => setDetailId(r.id)} onAdd={() => setAdding(true)} />

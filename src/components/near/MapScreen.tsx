@@ -16,9 +16,12 @@ interface MapScreenProps {
   userLocation: Location | null;
   reminders: DecoratedReminder[];
   onOpen: (r: DecoratedReminder) => void;
+  locating?: boolean;
+  locationError?: string | null;
+  onEnableLocation?: () => void;
 }
 
-export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
+export function MapScreen({ userLocation, reminders, onOpen, locating, locationError, onEnableLocation }: MapScreenProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
@@ -178,11 +181,24 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
             </span>
           </div>
           <div className="dim" style={{ fontSize: 13, marginBottom: 14 }}>
-            {userLocation?.address || (userLocation ? "Near you" : "Locating…")} · updated just now
+            {userLocation
+              ? `${userLocation.address || "Near you"} · updated just now`
+              : locating
+                ? "Locating…"
+                : "Location is off"}
           </div>
-          {live.length === 0 ? (
+          {!userLocation && !locating ? (
+            <div style={{ padding: "2px 0 8px" }}>
+              <div className="dim" style={{ fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 }}>
+                {locationError || "Turn on location so we can ping you near your reminders."}
+              </div>
+              <button className="btn btn-accent" style={{ height: 46, padding: "0 18px" }} onClick={onEnableLocation}>
+                <Icon name="location" size={18} /> Enable location
+              </button>
+            </div>
+          ) : live.length === 0 ? (
             <div className="dim" style={{ fontSize: 14, padding: "8px 0" }}>
-              Nothing nearby — you&apos;re all clear.
+              {userLocation ? "Nothing nearby — you're all clear." : "Locating…"}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
