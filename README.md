@@ -45,7 +45,10 @@ Remove the `nr_devloc` key to go back to real GPS. (Normal users never set it.)
 
 Single-page app shell (`src/app/page.tsx`) with: **Onboarding**, a full-bleed interactive
 **Map** + peeking "in range now" sheet, a **Saved** feed, a 3-step **Add reminder** sheet, a
-**Reminder detail** view, and **Settings**.
+**Reminder detail** view, and **Settings** (editable name + **System / Light / Dark** theme).
+
+Mobile-first (designed for 360–430px phones, safe-area aware). Dark mode swaps the basemap to
+CARTO Dark Matter tiles and follows the OS by default.
 
 ## Project layout
 

@@ -51,8 +51,11 @@ export interface DecoratedReminder extends Reminder {
   inRange: boolean;      // enabled && nearest within radius
 }
 
+export type ThemePref = "system" | "light" | "dark";
+
 export interface Settings {
   name: string;
+  theme: ThemePref;
   always: boolean;
   precise: boolean;
   sound: boolean;

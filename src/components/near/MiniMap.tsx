@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
+import { tileUrl } from "@/lib/tiles";
+import { useIsDark } from "@/hooks/use-is-dark";
 import type { CategoryKey } from "@/lib/types";
-
-const VOYAGER = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
 interface MiniMapProps {
   center: [number, number];
@@ -23,7 +23,9 @@ export function MiniMap({ center, radius = 400, height = 200, zoom = 15, cat = "
   const mapRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const tileRef = useRef<any>(null);
   const Lref = useRef<any>(null);
+  const dark = useIsDark();
 
   // init once
   useEffect(() => {
@@ -45,7 +47,7 @@ export function MiniMap({ center, radius = 400, height = 200, zoom = 15, cat = "
       }).setView(center, zoom);
       mapRef.current = map;
 
-      L.tileLayer(VOYAGER, { maxZoom: 20, subdomains: "abcd" }).addTo(map);
+      tileRef.current = L.tileLayer(tileUrl(document.documentElement.classList.contains("dark")), { maxZoom: 20, subdomains: "abcd" }).addTo(map);
 
       circleRef.current = L.circle(center, {
         radius, color: accent, weight: 1.5, opacity: 0.6, fillColor: accent, fillOpacity: 0.12,
@@ -71,6 +73,7 @@ export function MiniMap({ center, radius = 400, height = 200, zoom = 15, cat = "
         mapRef.current = null;
         circleRef.current = null;
         markerRef.current = null;
+        tileRef.current = null;
         Lref.current = null;
       }
     };
@@ -100,6 +103,11 @@ export function MiniMap({ center, radius = 400, height = 200, zoom = 15, cat = "
       })
     );
   }, [live, cat]);
+
+  // swap basemap tiles when the theme changes
+  useEffect(() => {
+    if (tileRef.current) tileRef.current.setUrl(tileUrl(dark));
+  }, [dark]);
 
   return <div ref={elRef} className="minimap" style={{ height }} />;
 }

@@ -50,6 +50,20 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
           <span className="badge">PRO</span>
         </div>
 
+        <div className="section-label" style={{ margin: "26px 2px 12px" }}>Appearance</div>
+        <div className="seg">
+          {(["system", "light", "dark"] as const).map((t) => (
+            <button
+              key={t}
+              className={settings.theme === t ? "on" : ""}
+              onClick={() => setSettings({ ...settings, theme: t })}
+              style={{ textTransform: "capitalize" }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Location</div>
         <div className="group">
           <div className="row">

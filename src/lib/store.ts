@@ -16,6 +16,7 @@ const SEED: Reminder[] = [
 
 export const DEFAULT_SETTINGS: Settings = {
   name: "",
+  theme: "system",
   always: true,
   precise: true,
   sound: true,

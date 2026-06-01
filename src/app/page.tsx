@@ -21,6 +21,7 @@ import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
 import { TabBar, type TabId } from "@/components/near/TabBar";
 import { Toast } from "@/components/near/Toast";
+import { Icon } from "@/components/near/Icon";
 import type { CategoryKey, DecoratedReminder, Reminder, Settings as SettingsType } from "@/lib/types";
 
 export default function Home() {
@@ -55,6 +56,21 @@ export default function Home() {
       return next;
     });
   }, [permissionStatus]);
+
+  // Apply the chosen theme; follow the OS when set to "system".
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const isDark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
+      document.documentElement.classList.toggle("dark", isDark);
+    };
+    apply();
+    if (settings.theme === "system") {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+  }, [settings.theme]);
 
   const activeCats = useMemo<CategoryKey[]>(
     () => Array.from(new Set(reminders.filter((r) => r.enabled).map((r) => r.cat))),
@@ -135,7 +151,14 @@ export default function Home() {
         </>
       )}
 
-      {onboarded && !detail && <TabBar tab={tab} setTab={setTab} onAdd={() => setAdding(true)} />}
+      {onboarded && !detail && (
+        <>
+          <TabBar tab={tab} setTab={setTab} />
+          <button className="add-fab" onClick={() => setAdding(true)} aria-label="New reminder">
+            <Icon name="plus" size={26} stroke={2.6} />
+          </button>
+        </>
+      )}
       {adding && <AddFlow userLocation={location} onClose={() => setAdding(false)} onCreate={createReminder} />}
       {toast && <Toast message={toast} />}
     </div>

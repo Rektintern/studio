@@ -6,9 +6,10 @@ import { Icon } from "./Icon";
 import { ReminderRow } from "./ReminderRow";
 import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
+import { tileUrl } from "@/lib/tiles";
+import { useIsDark } from "@/hooks/use-is-dark";
 import type { DecoratedReminder, Location } from "@/lib/types";
 
-const VOYAGER = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 const FALLBACK: [number, number] = [20.5937, 78.9629]; // India centroid, used until GPS arrives
 
 interface MapScreenProps {
@@ -22,7 +23,9 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
   const overlayRef = useRef<any>(null);
+  const tileRef = useRef<any>(null);
   const didCenter = useRef(false);
+  const dark = useIsDark();
 
   const userPos: [number, number] | null = userLocation
     ? [userLocation.latitude, userLocation.longitude]
@@ -46,9 +49,10 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
       mapRef.current = map;
       if (userPos) didCenter.current = true;
 
-      L.tileLayer(VOYAGER, { maxZoom: 20, subdomains: "abcd", attribution: "© OpenStreetMap · © CARTO" }).addTo(map);
+      tileRef.current = L.tileLayer(tileUrl(document.documentElement.classList.contains("dark")), {
+        maxZoom: 20, subdomains: "abcd", attribution: "© OpenStreetMap · © CARTO",
+      }).addTo(map);
       L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
-      L.control.zoom({ position: "bottomright" }).addTo(map);
       overlayRef.current = L.layerGroup().addTo(map);
 
       draw();
@@ -61,6 +65,7 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
         mapRef.current.remove();
         mapRef.current = null;
         overlayRef.current = null;
+        tileRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,11 +93,12 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
 
     const acc = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "#1b8f5a";
 
-    // coverage rings for every in-range reminder
+    // coverage rings for every in-range reminder — thin outline only (no fill)
+    // so the map stays readable even when several overlap
     reminders.forEach((r) => {
       if (!r.inRange || !r.nearest) return;
       L.circle([r.nearest.lat, r.nearest.lon], {
-        radius: r.radius, color: acc, weight: 1, opacity: 0.4, fillColor: acc, fillOpacity: 0.07,
+        radius: r.radius, color: acc, weight: 1.5, opacity: 0.5, fill: false,
       }).addTo(overlay);
     });
 
@@ -123,6 +129,11 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reminders, userPos?.[0], userPos?.[1]]);
 
+  // swap basemap tiles when the theme changes
+  useEffect(() => {
+    if (tileRef.current) tileRef.current.setUrl(tileUrl(dark));
+  }, [dark]);
+
   const recenter = () => {
     if (mapRef.current && userPos) mapRef.current.flyTo(userPos, 15, { duration: 0.8 });
   };
@@ -149,7 +160,7 @@ export function MapScreen({ userLocation, reminders, onOpen }: MapScreenProps) {
 
       <button
         className="map-fab"
-        style={{ position: "absolute", right: 16, bottom: "calc(env(safe-area-inset-bottom, 0px) + 282px)", zIndex: 500 }}
+        style={{ position: "absolute", right: 16, top: "calc(env(safe-area-inset-top, 0px) + 76px)", zIndex: 500 }}
         onClick={recenter}
         aria-label="Recenter"
       >
