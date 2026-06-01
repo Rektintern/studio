@@ -1,0 +1,156 @@
+"use client";
+
+import { useState } from "react";
+import { Icon } from "./Icon";
+import { MiniMap } from "./MiniMap";
+import { CATEGORIES, CATEGORY_KEYS } from "@/lib/categories";
+import { fmtDist } from "@/lib/geo";
+import type { CategoryKey, Location, Reminder, TriggerMode } from "@/lib/types";
+
+const QUICK_ITEMS = ["Dark chocolate", "Oat milk", "AA batteries", "Stamps", "Prescription", "Cash", "Coffee beans", "Light bulbs"];
+const FALLBACK: [number, number] = [20.5937, 78.9629];
+
+interface AddFlowProps {
+  userLocation: Location | null;
+  onClose: () => void;
+  onCreate: (r: Reminder) => void;
+}
+
+export function AddFlow({ userLocation, onClose, onCreate }: AddFlowProps) {
+  const [step, setStep] = useState(0);
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState<CategoryKey | null>(null);
+  const [radius, setRadius] = useState(500);
+  const [trigger, setTrigger] = useState<TriggerMode>("arriving");
+
+  const canNext = step === 0 ? title.trim().length > 0 : step === 1 ? !!cat : true;
+  const center: [number, number] = userLocation ? [userLocation.latitude, userLocation.longitude] : FALLBACK;
+
+  const finish = () => {
+    if (!cat) return;
+    onCreate({
+      id: "r" + Date.now(),
+      title: title.trim(),
+      cat,
+      radius,
+      trigger,
+      enabled: true,
+      createdAt: Date.now(),
+    });
+  };
+
+  const next = () => (step < 2 ? setStep(step + 1) : finish());
+  const back = () => (step > 0 ? setStep(step - 1) : onClose());
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="sheet" style={{ maxHeight: "92%" }}>
+        <div className="sheet-grab" />
+        <div style={{ padding: "8px 24px 30px" }}>
+          {/* header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <button className="iconbtn" onClick={back} aria-label={step === 0 ? "Close" : "Back"}>
+              <Icon name={step === 0 ? "close" : "back"} size={20} />
+            </button>
+            <div className="steps">
+              {[0, 1, 2].map((i) => (
+                <i key={i} className={i === step ? "on" : i < step ? "done" : ""} />
+              ))}
+            </div>
+            <div style={{ width: 44 }} />
+          </div>
+
+          <div style={{ minHeight: 372 }}>
+            {step === 0 && (
+              <div className="fadeswap">
+                <div className="eyebrow">STEP 01</div>
+                <div className="h2" style={{ marginTop: 10, fontSize: 24 }}>
+                  What should we<br />remind you about?
+                </div>
+                <input
+                  className="bigfield"
+                  autoFocus
+                  placeholder="e.g. Buy dark chocolate"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && canNext && next()}
+                />
+                <div className="section-label" style={{ margin: "22px 0 12px" }}>QUICK ADD</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 9 }}>
+                  {QUICK_ITEMS.map((it) => (
+                    <button key={it} className={"chip" + (title === it ? " on" : "")} onClick={() => setTitle(it)}>
+                      {it}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div className="fadeswap">
+                <div className="eyebrow">STEP 02</div>
+                <div className="h2" style={{ marginTop: 10, fontSize: 24 }}>
+                  Where should we<br />nudge you?
+                </div>
+                <div className="dim" style={{ marginTop: 8, fontSize: 14 }}>We&apos;ll watch for these places as you move.</div>
+                <div className="catgrid" style={{ marginTop: 18 }}>
+                  {CATEGORY_KEYS.map((key) => {
+                    const c = CATEGORIES[key];
+                    return (
+                      <button key={key} className={"cat" + (cat === key ? " on" : "")} onClick={() => setCat(key)}>
+                        <div className="cat-ico"><Icon name={c.icon} size={22} /></div>
+                        <div>
+                          <div className="cat-name">{c.label}</div>
+                          <div className="cat-sub">{c.hint}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="fadeswap">
+                <div className="eyebrow">STEP 03</div>
+                <div className="h2" style={{ marginTop: 10, fontSize: 24 }}>
+                  How close is<br />close enough?
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <MiniMap center={center} radius={radius} height={190} cat={cat || "grocery"} live />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8, margin: "16px 0 8px" }}>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 600, color: "var(--text)" }}>{fmtDist(radius)}</span>
+                  <span className="dim" style={{ fontSize: 14 }}>radius</span>
+                </div>
+                <input className="slider" type="range" min={100} max={2000} step={50} value={radius} onChange={(e) => setRadius(+e.target.value)} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--text-3)" }}>100m</span>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--text-3)" }}>2km</span>
+                </div>
+
+                <div className="section-label" style={{ margin: "22px 0 10px" }}>PING ME WHEN</div>
+                <div className="seg">
+                  <button className={trigger === "arriving" ? "on" : ""} onClick={() => setTrigger("arriving")}>Arriving</button>
+                  <button className={trigger === "nearby" ? "on" : ""} onClick={() => setTrigger("nearby")}>Anytime nearby</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            className="btn btn-accent btn-block"
+            style={{ marginTop: 18, opacity: canNext ? 1 : 0.4 }}
+            disabled={!canNext}
+            onClick={next}
+          >
+            {step < 2 ? "Continue" : (<><Icon name="check" size={20} /> Set reminder</>)}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
