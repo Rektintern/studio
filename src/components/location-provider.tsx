@@ -1,14 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { Location, Reminder } from "@/lib/types";
-import { getReminders } from "@/lib/store";
+import type { Location } from "@/lib/types";
 import { calculateDistance } from "@/lib/geo";
 
 interface LocationContextType {
   location: Location | null;
   error: string | null;
-  permissionStatus: PermissionState | 'loading';
+  permissionStatus: PermissionState | "loading";
   isLoading: boolean;
   refresh: () => void;
   setManualLocation: (loc: Location) => void;
@@ -17,113 +16,76 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
-const NOTIFICATION_COOLDOWN = 60 * 60 * 1000;
-
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<Location | null>(null);
   const [isManual, setIsManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState | 'loading'>('loading');
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | "loading">("loading");
   const [isLoading, setIsLoading] = useState(true);
-  
-  const notifiedReminders = useRef<Record<string, number>>({});
+
   const lastGeocoded = useRef<{ lat: number; lon: number; time: number } | null>(null);
+  const isManualRef = useRef(false);
 
   const setManualLocation = (loc: Location) => {
-    setLocation(loc);
+    isManualRef.current = true;
     setIsManual(true);
+    setLocation(loc);
     setIsLoading(false);
-    checkProximity(loc);
   };
 
-  const fetchReverseGeocode = async (lat: number, lon: number): Promise<string> => {
-    try {
-      if (lastGeocoded.current) {
-        const dist = calculateDistance(lat, lon, lastGeocoded.current.lat, lastGeocoded.current.lon);
-        const timeDiff = Date.now() - lastGeocoded.current.time;
-        if (dist < 50 && timeDiff < 45000) {
-          return location?.address || "Current Location";
-        }
+  const fetchReverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
+    // Reuse the last label if we've barely moved (keeps the free geocoder happy).
+    if (lastGeocoded.current) {
+      const dist = calculateDistance(lat, lon, lastGeocoded.current.lat, lastGeocoded.current.lon);
+      if (dist < 60 && Date.now() - lastGeocoded.current.time < 45000) {
+        return location?.address || "Near you";
       }
-
-      const response = await fetch(
+    }
+    try {
+      const res = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
       );
-      const data = await response.json();
-      
+      const data = await res.json();
       if (data) {
         lastGeocoded.current = { lat, lon, time: Date.now() };
-        const parts = Array.from(new Set([data.locality, data.city, data.principalSubdivision, data.countryName]))
-          .filter(Boolean);
-        return parts.join(", ") || "Current Position";
+        const parts = Array.from(
+          new Set([data.locality, data.city, data.principalSubdivision, data.countryCode])
+        ).filter(Boolean);
+        return parts.slice(0, 2).join(", ") || "Near you";
       }
-    } catch (err) {
-      console.warn("Reverse geocoding failed", err);
+    } catch {
+      // ignore — label is cosmetic
     }
-    return "Current Position";
-  };
+    return "Near you";
+  }, [location?.address]);
 
-  const triggerNotification = (reminder: Reminder) => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission === "granted") {
-      new Notification("NearRemind Alert!", {
-        body: `You're near ${reminder.location.address || "your destination"} — don't forget: ${reminder.title}!`,
-        tag: reminder.id,
-        requireInteraction: true,
+  const applyPosition = useCallback(
+    async (position: GeolocationPosition) => {
+      if (isManualRef.current) return;
+      const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
+      setLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        address,
       });
-    }
-  };
+      setError(null);
+      setIsLoading(false);
+    },
+    [fetchReverseGeocode]
+  );
 
-  const checkProximity = useCallback((currentLoc: Location) => {
-    const reminders = getReminders();
-    const now = Date.now();
-    
-    reminders.forEach(reminder => {
-      if (!reminder.isActive) {
-        delete notifiedReminders.current[reminder.id];
-        return;
-      }
-      const distance = calculateDistance(
-        currentLoc.latitude, currentLoc.longitude,
-        reminder.location.latitude, reminder.location.longitude
-      );
-      const isInside = distance <= reminder.radius;
-      const lastNotified = notifiedReminders.current[reminder.id];
-      if (isInside) {
-        if (!lastNotified || (now - lastNotified > NOTIFICATION_COOLDOWN)) {
-          triggerNotification(reminder);
-          notifiedReminders.current[reminder.id] = now;
-        }
-      }
-    });
-  }, []);
-
-  const updateLocation = useCallback(async () => {
-    if (isManual) return; // Don't override manual pin with GPS updates
-    
+  const refresh = useCallback(() => {
     if (typeof window === "undefined" || !navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
       setIsLoading(false);
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
-        const newLoc = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address
-        };
-        setLocation(newLoc);
-        checkProximity(newLoc);
-        setError(null);
-        setIsLoading(false);
-      },
+      applyPosition,
       (err) => {
         if (err.code === 1) {
           setError("Location access denied.");
-          setPermissionStatus('denied');
+          setPermissionStatus("denied");
         } else {
           setError(err.message);
         }
@@ -131,55 +93,63 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
-  }, [checkProximity, isManual]);
+  }, [applyPosition]);
 
   useEffect(() => {
+    // Optional manual-location override (handy as a "fake GPS" for demos/testing).
+    // Set localStorage "nr_devloc" to {latitude, longitude, address}. Real GPS still
+    // takes over when available; normal users never set this key.
+    try {
+      const dev = localStorage.getItem("nr_devloc");
+      if (dev) {
+        const d = JSON.parse(dev);
+        if (typeof d?.latitude === "number" && typeof d?.longitude === "number") {
+          setLocation({ latitude: d.latitude, longitude: d.longitude, address: d.address });
+          setIsLoading(false);
+        }
+      }
+    } catch {
+      // ignore malformed override
+    }
+
+    // Ask for notification permission up front so pings can fire.
     if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
+      if (Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
       }
     }
 
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
+    if (navigator.permissions?.query) {
+      navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
         setPermissionStatus(result.state);
         result.onchange = () => {
           setPermissionStatus(result.state);
-          if (result.state === 'granted') setIsManual(false);
+          if (result.state === "granted") {
+            isManualRef.current = false;
+            setIsManual(false);
+          }
         };
       });
     }
 
-    updateLocation();
-    const pollId = setInterval(updateLocation, 30000);
-
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        if (isManual) return;
-        const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
-        const newLoc = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address
-        };
-        setLocation(newLoc);
-        checkProximity(newLoc);
-        setError(null);
-      },
+    refresh();
+    const watchId = navigator.geolocation?.watchPosition(
+      applyPosition,
       (err) => {
-        if (err.code === 1) setPermissionStatus('denied');
+        if (err.code === 1) setPermissionStatus("denied");
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
 
     return () => {
-      clearInterval(pollId);
-      navigator.geolocation.clearWatch(watchId);
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [updateLocation, checkProximity, isManual]);
+  }, [refresh, applyPosition]);
 
   return (
-    <LocationContext.Provider value={{ location, error, permissionStatus, isLoading, refresh: updateLocation, setManualLocation, isManual }}>
+    <LocationContext.Provider
+      value={{ location, error, permissionStatus, isLoading, refresh, setManualLocation, isManual }}
+    >
       {children}
     </LocationContext.Provider>
   );
