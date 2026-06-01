@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 import { MiniMap } from "./MiniMap";
 import { CATEGORIES, CATEGORY_PLURAL } from "@/lib/categories";
 import { fmtDist } from "@/lib/geo";
-import type { DecoratedReminder, Location } from "@/lib/types";
+import type { DecoratedReminder, Location, Place } from "@/lib/types";
 
 const FALLBACK: [number, number] = [20.5937, 78.9629];
 
@@ -14,6 +14,7 @@ interface ReminderDetailProps {
   onClose: () => void;
   onToggle: (r: DecoratedReminder) => void;
   onDelete: (r: DecoratedReminder) => void;
+  onNavigate: (place: Place) => void;
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
@@ -25,7 +26,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete }: ReminderDetailProps) {
+export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete, onNavigate }: ReminderDetailProps) {
   const cat = CATEGORIES[r.cat];
   const center: [number, number] = r.nearest
     ? [r.nearest.lat, r.nearest.lon]
@@ -34,10 +35,12 @@ export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete }:
     : FALLBACK;
 
   const navigate = () => {
-    const dest = r.nearest
-      ? `${r.nearest.lat},${r.nearest.lon}`
-      : encodeURIComponent(cat.label);
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, "_blank");
+    if (r.nearest) {
+      onNavigate(r.nearest); // in-app route preview
+    } else {
+      // no matched place yet — fall back to a category search in Maps
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cat.label)}`, "_blank");
+    }
   };
 
   return (
