@@ -170,6 +170,13 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
         <Icon name="recenter" size={20} style={{ color: "#2a73e8" }} />
       </button>
 
+      {!userLocation && locating && (
+        <div className="locating-pill">
+          <span className="spinner" />
+          Finding your location…
+        </div>
+      )}
+
       {/* peeking bottom sheet */}
       <div className="map-sheet" style={{ zIndex: 500 }}>
         <div className="sheet-grab" />
