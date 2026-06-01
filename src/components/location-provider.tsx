@@ -119,6 +119,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // Register the service worker so notifications can show on mobile browsers
+    // (which reject the `new Notification()` constructor).
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
     if (navigator.permissions?.query) {
       navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
         setPermissionStatus(result.state);

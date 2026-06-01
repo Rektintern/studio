@@ -17,15 +17,16 @@ import { Onboarding } from "@/components/near/Onboarding";
 import { MapScreen } from "@/components/near/MapScreen";
 import { Feed } from "@/components/near/Feed";
 import { ReminderDetail } from "@/components/near/ReminderDetail";
+import { RouteView } from "@/components/near/RouteView";
 import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
 import { TabBar, type TabId } from "@/components/near/TabBar";
 import { Toast } from "@/components/near/Toast";
 import { Icon } from "@/components/near/Icon";
-import type { CategoryKey, DecoratedReminder, Reminder, Settings as SettingsType } from "@/lib/types";
+import type { CategoryKey, DecoratedReminder, Place, Reminder, Settings as SettingsType } from "@/lib/types";
 
 export default function Home() {
-  const { location, permissionStatus } = useLocation();
+  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation } = useLocation();
 
   const [hydrated, setHydrated] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
@@ -33,6 +34,7 @@ export default function Home() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [settings, setSettingsState] = useState<SettingsType>(DEFAULT_SETTINGS);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [routePlace, setRoutePlace] = useState<{ place: Place; cat: CategoryKey } | null>(null);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -129,6 +131,13 @@ export default function Home() {
     <div className="screen">
       {!onboarded ? (
         <Onboarding userLocation={location} onDone={finishOnboarding} />
+      ) : routePlace ? (
+        <RouteView
+          userLocation={location}
+          place={routePlace.place}
+          cat={routePlace.cat}
+          onClose={() => setRoutePlace(null)}
+        />
       ) : detail ? (
         <ReminderDetail
           r={detail}
@@ -136,11 +145,19 @@ export default function Home() {
           onClose={() => setDetailId(null)}
           onToggle={toggleReminder}
           onDelete={deleteReminder}
+          onNavigate={(place) => setRoutePlace({ place, cat: detail.cat })}
         />
       ) : (
         <>
           {tab === "map" && (
-            <MapScreen userLocation={location} reminders={decorated} onOpen={(r) => setDetailId(r.id)} />
+            <MapScreen
+              userLocation={location}
+              reminders={decorated}
+              onOpen={(r) => setDetailId(r.id)}
+              locating={locating}
+              locationError={locationError}
+              onEnableLocation={refreshLocation}
+            />
           )}
           {tab === "feed" && (
             <Feed reminders={decorated} onOpen={(r) => setDetailId(r.id)} onAdd={() => setAdding(true)} />
@@ -151,7 +168,7 @@ export default function Home() {
         </>
       )}
 
-      {onboarded && !detail && (
+      {onboarded && !detail && !routePlace && (
         <>
           <TabBar tab={tab} setTab={setTab} />
           <button className="add-fab" onClick={() => setAdding(true)} aria-label="New reminder">
