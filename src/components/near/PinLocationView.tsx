@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
+import { searchPlaces, type GeoResult } from "@/lib/geocode";
 import type { Location } from "@/lib/types";
 
 const FALLBACK: [number, number] = [20.5937, 78.9629];
@@ -24,6 +25,29 @@ export function PinLocationView({ userLocation, onConfirm, onClose }: PinLocatio
   );
   const dark = useIsDark();
   const [address, setAddress] = useState("");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onSearchChange = (v: string) => {
+    setQuery(v);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (v.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    searchTimer.current = setTimeout(async () => {
+      setResults(await searchPlaces(v));
+    }, 350);
+  };
+
+  const pickResult = (r: GeoResult) => {
+    setQuery(r.label);
+    setResults([]);
+    setAddress(r.label);
+    centerRef.current = [r.lat, r.lon];
+    mapRef.current?.flyTo([r.lat, r.lon], 16, { duration: 0.8 });
+  };
 
   const reverseGeocode = async () => {
     const [lat, lon] = centerRef.current;
@@ -106,10 +130,35 @@ export function PinLocationView({ userLocation, onConfirm, onClose }: PinLocatio
           <Icon name="back" size={22} />
         </button>
         <div className="search elevated" style={{ flex: 1, height: 50 }}>
-          <Icon name="pin" size={18} style={{ color: "var(--brand)" }} />
-          <span style={{ fontWeight: 700, fontSize: 15 }}>Move the map to pin your spot</span>
+          <Icon name="search" size={18} style={{ color: "var(--text-3)" }} />
+          <input
+            value={query}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search a place or address"
+            autoComplete="off"
+          />
         </div>
       </div>
+
+      {results.length > 0 && (
+        <div
+          style={{
+            position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 72px)",
+            left: 16, right: 16, zIndex: 510,
+            background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16,
+            boxShadow: "var(--shadow-pop)", overflow: "hidden", maxHeight: "46%", overflowY: "auto",
+          }}
+        >
+          {results.map((r, i) => (
+            <button key={i} className="row" onClick={() => pickResult(r)} style={{ width: "100%" }}>
+              <div className="row-ico"><Icon name="pin" size={16} /></div>
+              <div className="row-main">
+                <div className="row-title" style={{ fontSize: 14, whiteSpace: "normal", lineHeight: 1.3 }}>{r.label}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* bottom confirm card */}
       <div className="map-sheet" style={{ zIndex: 500, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}>
