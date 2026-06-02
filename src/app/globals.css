@@ -424,3 +424,16 @@
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* fixed center pin for "set location on map" */
+.pin-crosshair {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -100%);
+  z-index: 450; color: var(--brand); pointer-events: none;
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.3));
+}
+/* inline "set on map" link in the map sheet */
+.link-pin {
+  background: none; border: none; padding: 0 0 0 5px;
+  font: inherit; color: var(--brand); font-weight: 700; cursor: pointer;
+}

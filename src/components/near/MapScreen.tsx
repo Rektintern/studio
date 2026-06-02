@@ -19,9 +19,10 @@ interface MapScreenProps {
   locating?: boolean;
   locationError?: string | null;
   onEnableLocation?: () => void;
+  onPinLocation?: () => void;
 }
 
-export function MapScreen({ userLocation, reminders, onOpen, locating, locationError, onEnableLocation }: MapScreenProps) {
+export function MapScreen({ userLocation, reminders, onOpen, locating, locationError, onEnableLocation, onPinLocation }: MapScreenProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
@@ -193,6 +194,9 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
               : locating
                 ? "Locating…"
                 : "Location is off"}
+            {onPinLocation && !locating && (
+              <button className="link-pin" onClick={onPinLocation}>· Set on map</button>
+            )}
           </div>
           {!userLocation && !locating ? (
             <div style={{ padding: "2px 0 8px" }}>
