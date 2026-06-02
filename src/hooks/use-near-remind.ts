@@ -91,17 +91,27 @@ async function showPing(title: string, options: NotificationOptions) {
   }
 }
 
-/** Fires a local notification the moment a reminder comes into range. */
-export function useProximityPings(decorated: DecoratedReminder[], settings: Settings) {
+/**
+ * The moment a reminder comes into range, fires:
+ *  - an in-app banner (via onInAppPing) — pure UI, always works while the app is open
+ *  - a system notification — needs permission (and runs in the background on native)
+ */
+export function useProximityPings(
+  decorated: DecoratedReminder[],
+  settings: Settings,
+  onInAppPing?: (r: DecoratedReminder) => void
+) {
   const fired = useRef<Record<string, number>>({});
+  const pingRef = useRef(onInAppPing);
+  pingRef.current = onInAppPing;
   const COOLDOWN = 30 * 60 * 1000;
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    if (settings.quiet && inQuietHours()) return;
-
     const now = Date.now();
+    const quiet = settings.quiet && inQuietHours();
+    const canNotify =
+      typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted";
+
     decorated.forEach((r) => {
       if (!r.inRange || !r.nearest) {
         // reset the edge trigger once we leave range so re-entry can fire again
@@ -114,14 +124,23 @@ export function useProximityPings(decorated: DecoratedReminder[], settings: Sett
       if (!shouldFire) return;
 
       fired.current[r.id] = now;
-      void showPing("NEAR REMIND", {
-        body: `You're near ${r.nearest.name} — ${r.title}`,
-        tag: r.id,
-        silent: !settings.sound,
-      });
-      if (settings.haptic && typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate?.(120);
+      if (quiet) return; // quiet hours — consume the transition without alerting
+
+      // In-app banner — pure UI, no permission needed.
+      pingRef.current?.(r);
+
+      // System notification — needs permission; the real background pings come with native.
+      if (canNotify) {
+        void showPing("NEAR REMIND", {
+          body: `You're near ${r.nearest.name} — ${r.title}`,
+          tag: r.id,
+          silent: !settings.sound,
+        });
+        if (settings.haptic && typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate?.(120);
+        }
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [decorated, settings]);
 }

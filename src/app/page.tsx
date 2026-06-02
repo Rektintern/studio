@@ -23,6 +23,7 @@ import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
 import { TabBar, type TabId } from "@/components/near/TabBar";
 import { Toast } from "@/components/near/Toast";
+import { PingBanner } from "@/components/near/PingBanner";
 import { Icon } from "@/components/near/Icon";
 import type { CategoryKey, DecoratedReminder, Place, Reminder, Settings as SettingsType } from "@/lib/types";
 
@@ -39,6 +40,7 @@ export default function Home() {
   const [pinning, setPinning] = useState(false);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [ping, setPing] = useState<DecoratedReminder | null>(null);
 
   // hydrate from localStorage (client only) to avoid SSR mismatch
   useEffect(() => {
@@ -85,7 +87,14 @@ export default function Home() {
     () => decorateReminders(reminders, location, placesByCat),
     [reminders, location, placesByCat]
   );
-  useProximityPings(decorated, settings);
+  useProximityPings(decorated, settings, setPing);
+
+  // auto-dismiss the in-app proximity banner
+  useEffect(() => {
+    if (!ping) return;
+    const t = setTimeout(() => setPing(null), 8000);
+    return () => clearTimeout(t);
+  }, [ping]);
 
   const detail = detailId ? decorated.find((r) => r.id === detailId) ?? null : null;
 
@@ -189,6 +198,13 @@ export default function Home() {
         </>
       )}
       {adding && <AddFlow userLocation={location} onClose={() => setAdding(false)} onCreate={createReminder} />}
+      {ping && (
+        <PingBanner
+          r={ping}
+          onOpen={() => { setDetailId(ping.id); setPing(null); }}
+          onClose={() => setPing(null)}
+        />
+      )}
       {toast && <Toast message={toast} />}
     </div>
   );

@@ -437,3 +437,19 @@
   background: none; border: none; padding: 0 0 0 5px;
   font: inherit; color: var(--brand); font-weight: 700; cursor: pointer;
 }
+
+/* in-app proximity ping banner */
+.ping-banner {
+  position: absolute; z-index: 60; left: 14px; right: 14px;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 18px;
+  background: var(--brand); color: var(--brand-ink);
+  box-shadow: var(--shadow-pop);
+  animation: pingin .42s cubic-bezier(.16, 1, .3, 1);
+  cursor: pointer;
+}
+@keyframes pingin { from { opacity: 0; transform: translateY(-18px); } }
+.ping-banner .pb-ico { width: 38px; height: 38px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: grid; place-items: center; flex-shrink: 0; }
+.ping-banner .pb-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+.ping-banner .pb-sub { font-size: 13px; opacity: 0.92; margin-top: 1px; }
