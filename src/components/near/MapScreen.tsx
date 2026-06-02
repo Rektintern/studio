@@ -157,8 +157,8 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
           <Icon name="search" size={19} style={{ color: "var(--text-3)" }} />
           <input placeholder="Search places & reminders" />
         </div>
-        <button className="map-fab" style={{ width: 50, height: 50, borderRadius: 16 }} aria-label="Layers">
-          <Icon name="layers" size={20} />
+        <button className="map-fab" style={{ width: 50, height: 50, borderRadius: 16 }} onClick={onPinLocation} aria-label="Set location on map">
+          <Icon name="pin" size={20} />
         </button>
       </div>
 
@@ -194,7 +194,7 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
               : locating
                 ? "Locating…"
                 : "Location is off"}
-            {onPinLocation && !locating && (
+            {onPinLocation && (
               <button className="link-pin" onClick={onPinLocation}>· Set on map</button>
             )}
           </div>
