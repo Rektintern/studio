@@ -18,6 +18,7 @@ import { MapScreen } from "@/components/near/MapScreen";
 import { Feed } from "@/components/near/Feed";
 import { ReminderDetail } from "@/components/near/ReminderDetail";
 import { RouteView } from "@/components/near/RouteView";
+import { PinLocationView } from "@/components/near/PinLocationView";
 import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
 import { TabBar, type TabId } from "@/components/near/TabBar";
@@ -26,7 +27,7 @@ import { Icon } from "@/components/near/Icon";
 import type { CategoryKey, DecoratedReminder, Place, Reminder, Settings as SettingsType } from "@/lib/types";
 
 export default function Home() {
-  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation } = useLocation();
+  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation, setManualLocation } = useLocation();
 
   const [hydrated, setHydrated] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
@@ -35,6 +36,7 @@ export default function Home() {
   const [settings, setSettingsState] = useState<SettingsType>(DEFAULT_SETTINGS);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [routePlace, setRoutePlace] = useState<{ place: Place; cat: CategoryKey } | null>(null);
+  const [pinning, setPinning] = useState(false);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -131,6 +133,12 @@ export default function Home() {
     <div className="screen">
       {!onboarded ? (
         <Onboarding userLocation={location} onDone={finishOnboarding} />
+      ) : pinning ? (
+        <PinLocationView
+          userLocation={location}
+          onConfirm={(loc) => { setManualLocation(loc); setPinning(false); }}
+          onClose={() => setPinning(false)}
+        />
       ) : routePlace ? (
         <RouteView
           userLocation={location}
@@ -157,6 +165,7 @@ export default function Home() {
               locating={locating}
               locationError={locationError}
               onEnableLocation={refreshLocation}
+              onPinLocation={() => setPinning(true)}
             />
           )}
           {tab === "feed" && (
@@ -168,7 +177,7 @@ export default function Home() {
         </>
       )}
 
-      {onboarded && !detail && !routePlace && (
+      {onboarded && !detail && !routePlace && !pinning && (
         <>
           <TabBar tab={tab} setTab={setTab} />
           <button className="add-fab" onClick={() => setAdding(true)} aria-label="New reminder">
