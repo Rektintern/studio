@@ -80,7 +80,7 @@ export default function Home() {
     () => Array.from(new Set(reminders.filter((r) => r.enabled).map((r) => r.cat))),
     [reminders]
   );
-  const { placesByCat } = useNearbyPlaces(location, activeCats);
+  const { placesByCat, scanning, failed: placesFailed, retry: retryPlaces } = useNearbyPlaces(location, activeCats);
   const decorated = useMemo(
     () => decorateReminders(reminders, location, placesByCat),
     [reminders, location, placesByCat]
@@ -150,6 +150,9 @@ export default function Home() {
         <ReminderDetail
           r={detail}
           userLocation={location}
+          scanning={scanning}
+          placesFailed={placesFailed}
+          onRetryPlaces={retryPlaces}
           onClose={() => setDetailId(null)}
           onToggle={toggleReminder}
           onDelete={deleteReminder}

@@ -13,9 +13,15 @@ const MOVE_THRESHOLD = 150; // meters before we re-query OSM
 export function useNearbyPlaces(userLocation: Location | null, cats: CategoryKey[]) {
   const [placesByCat, setPlacesByCat] = useState<PlacesByCat>({});
   const [scanning, setScanning] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const last = useRef<{ lat: number; lon: number; key: string } | null>(null);
 
   const catKey = Array.from(new Set(cats)).sort().join(",");
+  const retry = () => {
+    last.current = null;
+    setRetryTick((t) => t + 1);
+  };
 
   useEffect(() => {
     if (!userLocation || cats.length === 0) return;
@@ -29,17 +35,25 @@ export function useNearbyPlaces(userLocation: Location | null, cats: CategoryKey
 
     let cancelled = false;
     setScanning(true);
+    setFailed(false);
     (async () => {
       // Fetch one category at a time — Overpass rate-limits concurrent requests —
       // updating the UI progressively as each category resolves.
+      let anyError = false;
       for (const c of Array.from(new Set(cats))) {
-        const places = await fetchNearby(c, lat, lon);
-        if (cancelled) return;
-        setPlacesByCat((prev) => ({ ...prev, [c]: places }));
+        try {
+          const places = await fetchNearby(c, lat, lon);
+          if (cancelled) return;
+          setPlacesByCat((prev) => ({ ...prev, [c]: places }));
+        } catch {
+          anyError = true; // OSM unreachable for this category — keep any prior data
+        }
       }
-      // Record the fetched position only after success, so a cancelled
-      // (e.g. Strict Mode) run doesn't block the real fetch from retrying.
-      last.current = { lat, lon, key: catKey };
+      if (cancelled) return;
+      // Only mark the position done when nothing failed, so the next trigger
+      // (or a manual retry) re-queries the categories that errored.
+      if (!anyError) last.current = { lat, lon, key: catKey };
+      setFailed(anyError);
       setScanning(false);
     })();
 
@@ -47,9 +61,9 @@ export function useNearbyPlaces(userLocation: Location | null, cats: CategoryKey
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLocation?.latitude, userLocation?.longitude, catKey]);
+  }, [userLocation?.latitude, userLocation?.longitude, catKey, retryTick]);
 
-  return { placesByCat, scanning };
+  return { placesByCat, scanning, failed, retry };
 }
 
 function inQuietHours(): boolean {
