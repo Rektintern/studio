@@ -141,10 +141,19 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
     });
   }
 
+  // collapse the redraw inputs into ONE stable string — a deps array must never
+  // contain raw, variable-length arrays (React: "deps changed size between renders")
+  const drawKey =
+    reminders.map((r) => `${r.id}:${r.inRange ? 1 : 0}:${r.nearest?.id ?? ""}`).join("|") +
+    "#" +
+    nearbyStores.map((s) => s.id).join(",") +
+    "#" +
+    (userPos ? `${userPos[0].toFixed(5)},${userPos[1].toFixed(5)}` : "none");
+
   useEffect(() => {
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reminders, nearbyStores, userPos?.[0], userPos?.[1]]);
+  }, [drawKey]);
 
   // swap basemap tiles when the theme changes
   useEffect(() => {

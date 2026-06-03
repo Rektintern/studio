@@ -41,6 +41,7 @@ export default function Home() {
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [ping, setPing] = useState<DecoratedReminder | null>(null);
+  const [pingReset, setPingReset] = useState(0);
 
   // hydrate from localStorage (client only) to avoid SSR mismatch
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function Home() {
     }
     return out.slice(0, 60);
   }, [activeCats, placesByCat]);
-  useProximityPings(decorated, settings, setPing);
+  useProximityPings(decorated, settings, setPing, pingReset);
 
   // auto-dismiss the in-app proximity banner
   useEffect(() => {
@@ -158,7 +159,7 @@ export default function Home() {
       ) : pinning ? (
         <PinLocationView
           userLocation={location}
-          onConfirm={(loc) => { setManualLocation(loc); setPinning(false); }}
+          onConfirm={(loc) => { setManualLocation(loc); setPinning(false); setPingReset((n) => n + 1); }}
           onClose={() => setPinning(false)}
         />
       ) : routePlace ? (
