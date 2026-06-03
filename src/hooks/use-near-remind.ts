@@ -99,12 +99,19 @@ async function showPing(title: string, options: NotificationOptions) {
 export function useProximityPings(
   decorated: DecoratedReminder[],
   settings: Settings,
-  onInAppPing?: (r: DecoratedReminder) => void
+  onInAppPing?: (r: DecoratedReminder) => void,
+  resetSignal?: number
 ) {
   const fired = useRef<Record<string, number>>({});
   const pingRef = useRef(onInAppPing);
   pingRef.current = onInAppPing;
   const COOLDOWN = 30 * 60 * 1000;
+
+  // A deliberate location change (e.g. dropping a manual pin) clears the
+  // edge-trigger so in-range reminders re-notify at the new spot.
+  useEffect(() => {
+    fired.current = {};
+  }, [resetSignal]);
 
   useEffect(() => {
     const now = Date.now();

@@ -8,13 +8,16 @@ import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
 import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
-import type { DecoratedReminder, Location } from "@/lib/types";
+import type { CategoryKey, DecoratedReminder, Location } from "@/lib/types";
 
 const FALLBACK: [number, number] = [20.5937, 78.9629]; // India centroid, used until GPS arrives
+
+interface NearbyStore { id: string; lat: number; lon: number; name: string; cat: CategoryKey; }
 
 interface MapScreenProps {
   userLocation: Location | null;
   reminders: DecoratedReminder[];
+  nearbyStores?: NearbyStore[];
   onOpen: (r: DecoratedReminder) => void;
   locating?: boolean;
   locationError?: string | null;
@@ -22,7 +25,7 @@ interface MapScreenProps {
   onPinLocation?: () => void;
 }
 
-export function MapScreen({ userLocation, reminders, onOpen, locating, locationError, onEnableLocation, onPinLocation }: MapScreenProps) {
+export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, locating, locationError, onEnableLocation, onPinLocation }: MapScreenProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
@@ -106,6 +109,16 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
       }).addTo(overlay);
     });
 
+    // mark every nearby matching store with a small dot so you can see what's
+    // around your spot (skip ones a reminder already pins, to avoid doubling up)
+    const matchIds = new Set<string>();
+    reminders.forEach((r) => { if (r.nearest) matchIds.add(r.nearest.id); });
+    nearbyStores.forEach((s) => {
+      if (matchIds.has(s.id)) return;
+      const dot = L.divIcon({ className: "store-dot-wrap", iconSize: [14, 14], iconAnchor: [7, 7], html: `<span class="storedot"></span>` });
+      L.marker([s.lat, s.lon], { icon: dot }).addTo(overlay).bindPopup(s.name);
+    });
+
     // one pin per place (live wins when reminders share a nearest spot)
     const byPlace = new Map<string, { pos: [number, number]; cat: typeof reminders[number]["cat"]; live: boolean; r: DecoratedReminder }>();
     reminders.forEach((r) => {
@@ -128,10 +141,19 @@ export function MapScreen({ userLocation, reminders, onOpen, locating, locationE
     });
   }
 
+  // collapse the redraw inputs into ONE stable string — a deps array must never
+  // contain raw, variable-length arrays (React: "deps changed size between renders")
+  const drawKey =
+    reminders.map((r) => `${r.id}:${r.inRange ? 1 : 0}:${r.nearest?.id ?? ""}`).join("|") +
+    "#" +
+    nearbyStores.map((s) => s.id).join(",") +
+    "#" +
+    (userPos ? `${userPos[0].toFixed(5)},${userPos[1].toFixed(5)}` : "none");
+
   useEffect(() => {
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reminders, userPos?.[0], userPos?.[1]]);
+  }, [drawKey]);
 
   // swap basemap tiles when the theme changes
   useEffect(() => {

@@ -389,6 +389,10 @@
 .mappin.live { background: var(--brand); color: #fff; border-color: var(--brand); }
 .mini-pin-wrap { background: none !important; border: none !important; }
 
+/* small dot for every nearby matching store on the map */
+.store-dot-wrap { background: none !important; border: none !important; }
+.storedot { display: block; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--brand); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+
 /* map bottom sheet (peeking) */
 .map-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl); background: var(--app-bg); box-shadow: 0 -8px 28px -12px rgba(28, 33, 40, 0.22); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
 
