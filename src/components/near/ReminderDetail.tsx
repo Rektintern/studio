@@ -15,6 +15,9 @@ interface ReminderDetailProps {
   onToggle: (r: DecoratedReminder) => void;
   onDelete: (r: DecoratedReminder) => void;
   onNavigate: (place: Place) => void;
+  scanning?: boolean;
+  placesFailed?: boolean;
+  onRetryPlaces?: () => void;
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
@@ -26,7 +29,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete, onNavigate }: ReminderDetailProps) {
+export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete, onNavigate, scanning, placesFailed, onRetryPlaces }: ReminderDetailProps) {
   const cat = CATEGORIES[r.cat];
   const center: [number, number] = r.nearest
     ? [r.nearest.lat, r.nearest.lon]
@@ -86,13 +89,35 @@ export function ReminderDetail({ r, userLocation, onClose, onToggle, onDelete, o
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>{CATEGORY_PLURAL[r.cat]} nearby</div>
         <div className="group">
           {r.matches.length === 0 ? (
-            <div className="row" style={{ cursor: "default" }}>
-              <div className="row-ico"><Icon name="search" size={18} /></div>
-              <div className="row-main">
-                <div className="row-title">Scanning nearby…</div>
-                <div className="row-sub">We&apos;ll show matching {CATEGORY_PLURAL[r.cat].toLowerCase()} here.</div>
+            <button
+              className="row"
+              style={{ width: "100%", cursor: placesFailed && userLocation ? "pointer" : "default" }}
+              onClick={placesFailed && userLocation ? onRetryPlaces : undefined}
+            >
+              <div className="row-ico">
+                <Icon name={!userLocation ? "location" : placesFailed ? "target" : "search"} size={18} />
               </div>
-            </div>
+              <div className="row-main">
+                <div className="row-title">
+                  {!userLocation
+                    ? "Location needed"
+                    : scanning
+                      ? "Scanning nearby…"
+                      : placesFailed
+                        ? "Couldn't load nearby places"
+                        : `No ${CATEGORY_PLURAL[r.cat].toLowerCase()} within 3 km`}
+                </div>
+                <div className="row-sub">
+                  {!userLocation
+                    ? "Turn on location, or set it on the map, to find matches."
+                    : scanning
+                      ? `Finding ${CATEGORY_PLURAL[r.cat].toLowerCase()} around you…`
+                      : placesFailed
+                        ? "The map service is busy — tap to retry."
+                        : "Try a different category or move a little closer."}
+                </div>
+              </div>
+            </button>
           ) : (
             r.matches.slice(0, 3).map((place, i) => (
               <div className="row" key={place.id} style={{ cursor: "default" }}>
