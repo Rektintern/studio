@@ -87,6 +87,19 @@ export default function Home() {
     () => decorateReminders(reminders, location, placesByCat),
     [reminders, location, placesByCat]
   );
+  // every nearby matching store (for active reminder categories) to mark on the map
+  const nearbyStores = useMemo(() => {
+    const out: { id: string; lat: number; lon: number; name: string; cat: CategoryKey }[] = [];
+    const seen = new Set<string>();
+    for (const cat of activeCats) {
+      for (const p of placesByCat[cat] || []) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        out.push({ id: p.id, lat: p.lat, lon: p.lon, name: p.name, cat });
+      }
+    }
+    return out.slice(0, 60);
+  }, [activeCats, placesByCat]);
   useProximityPings(decorated, settings, setPing);
 
   // auto-dismiss the in-app proximity banner
@@ -173,6 +186,7 @@ export default function Home() {
             <MapScreen
               userLocation={location}
               reminders={decorated}
+              nearbyStores={nearbyStores}
               onOpen={(r) => setDetailId(r.id)}
               locating={locating}
               locationError={locationError}
