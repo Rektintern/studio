@@ -112,15 +112,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       // ignore malformed override
     }
 
-    // Ask for notification permission up front so pings can fire.
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
-      }
-    }
-
-    // Register the service worker so notifications can show on mobile browsers
-    // (which reject the `new Notification()` constructor).
+    // NOTE: notification permission is requested from a user gesture instead
+    // (see requestNotifyPermission) — auto-requesting on load is ignored by
+    // mobile browsers. Here we only register the SW that shows the pings.
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }

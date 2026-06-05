@@ -13,6 +13,7 @@ import {
 } from "@/lib/store";
 import { useNearbyPlaces, useProximityPings } from "@/hooks/use-near-remind";
 import { decorateReminders } from "@/lib/decorate";
+import { requestNotifyPermission } from "@/lib/notify";
 import { Onboarding } from "@/components/near/Onboarding";
 import { MapScreen } from "@/components/near/MapScreen";
 import { Feed } from "@/components/near/Feed";
@@ -124,6 +125,7 @@ export default function Home() {
   };
 
   const createReminder = (r: Reminder) => {
+    requestNotifyPermission(); // user gesture — ensure pings can fire for this reminder
     persist([r, ...reminders]);
     setAdding(false);
     setTab("feed");
@@ -142,6 +144,8 @@ export default function Home() {
     saveSettings(s);
   };
   const finishOnboarding = () => {
+    requestNotifyPermission(); // user gesture — ask to send pings (works on mobile + PC)
+    refreshLocation();
     persistOnboarded(true);
     setOnboarded(true);
   };
@@ -191,7 +195,7 @@ export default function Home() {
               onOpen={(r) => setDetailId(r.id)}
               locating={locating}
               locationError={locationError}
-              onEnableLocation={refreshLocation}
+              onEnableLocation={() => { requestNotifyPermission(); refreshLocation(); }}
               onPinLocation={() => setPinning(true)}
             />
           )}
