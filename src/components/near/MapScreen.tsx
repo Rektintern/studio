@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { ReminderRow } from "./ReminderRow";
+import { NotifyCta } from "./NotifyCta";
 import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
 import { tileUrl } from "@/lib/tiles";
@@ -240,6 +241,8 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
               ))}
             </div>
           )}
+
+          <NotifyCta />
         </div>
       </div>
     </div>
