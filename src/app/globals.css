@@ -226,6 +226,7 @@
   background: rgba(255, 255, 255, 0.86); border: 1px solid var(--line);
   backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
   box-shadow: var(--shadow-pop); padding: 0 8px;
+  position: relative; touch-action: none; /* lens drag must not scroll the page */
 }
 .tab {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -233,9 +234,25 @@
   font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.01em; font-weight: 700;
   transition: color .15s ease; height: 100%; justify-content: center;
   background: none; border: none;
+  position: relative; z-index: 1; /* above the sliding lens */
 }
 .tab.active { color: var(--brand); }
-.tab svg { width: 23px; height: 23px; }
+.tab svg { width: 23px; height: 23px; transition: transform .18s ease; }
+
+/* the liquid lens: parks on the active tab, follows the finger on press-drag */
+.tab-lens {
+  position: absolute; left: 8px; top: 7px; bottom: 7px;
+  width: calc((100% - 16px) / 3);
+  border-radius: 16px; z-index: 0; pointer-events: none;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  transition: transform .42s cubic-bezier(.2, 1.5, .3, 1); /* springy snap */
+  will-change: transform;
+}
+.tab-lens.drag { box-shadow: var(--shadow-card); }
+.tab.lensed { color: var(--text); }
+.tab.lensed svg { transform: scale(1.18) translateY(-1px); }
+.dark .tab-lens { background: var(--surface-3); }
 .tab-add .add-btn {
   width: 48px; height: 48px; border-radius: 16px;
   background: var(--brand); color: var(--brand-ink);
@@ -393,8 +410,21 @@
 .store-dot-wrap { background: none !important; border: none !important; }
 .storedot { display: block; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--brand); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
 
-/* map bottom sheet (peeking) */
-.map-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl); background: var(--app-bg); box-shadow: 0 -8px 28px -12px rgba(28, 33, 40, 0.22); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
+/* map bottom sheet (peeking) — draggable between expanded and collapsed */
+.map-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
+  border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl);
+  background: var(--app-bg); box-shadow: 0 -8px 28px -12px rgba(28, 33, 40, 0.22);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  transition: transform .5s cubic-bezier(.2, 1.25, .3, 1); /* springy snap */
+  will-change: transform; touch-action: none;
+}
+/* collapsed = only the grab handle + header peek above the tab bar */
+.map-sheet.collapsed { transform: translateY(calc(100% - 58px - (env(safe-area-inset-bottom, 0px) + 92px))); }
+/* generous hit target around the little handle; also tappable to toggle */
+.grab-zone { width: 100%; background: none; border: none; padding: 10px 0 6px; display: grid; place-items: center; cursor: grab; }
+.grab-zone:active { cursor: grabbing; }
+.grab-zone .sheet-grab { margin: 0; }
 
 /* floating round map button */
 .map-fab { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--text); box-shadow: var(--shadow-card); cursor: pointer; transition: transform .14s; border: none; }
@@ -457,3 +487,215 @@
 .ping-banner .pb-ico { width: 38px; height: 38px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: grid; place-items: center; flex-shrink: 0; }
 .ping-banner .pb-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
 .ping-banner .pb-sub { font-size: 13px; opacity: 0.92; margin-top: 1px; }
+
+/* ============================================================
+   GLASS THEME — its own mode beside light/dark. The backdrop is
+   a quiet, designed surface: fine topographic contour lines
+   etched on a deep green-slate base with one restrained brand
+   glow (topo = on-brand for a location app, and fine line detail
+   is what makes frosted blur visibly READ as glass — smooth
+   gradients don't). Every surface is a frosted white-alpha pane
+   with a specular rim and top sheen; white ink on a near-black
+   base keeps everything readable at any liquidness. --liquid
+   (0..1) comes from the Liquidness slider: more liquid =
+   clearer panes, more blur, brighter rim.
+   ============================================================ */
+:root {
+  --liquid: 0.55; /* overwritten inline from settings before paint */
+}
+
+:root.glass {
+  color-scheme: dark;
+
+  /* deep green-slate base the etching sits on */
+  --app-bg: #0d1310;
+  --page: #0a0f0c;
+
+  --brand: #2fbd76;
+  --brand-bright: #3ad086;
+  --brand-dim: #123626;
+  --brand-ink: #04130b;
+  --brand-glow: rgba(47, 189, 118, 0.45);
+  --brand-soft: rgba(47, 189, 118, 0.2);
+
+  --text: #f3f6f4;
+  --text-2: rgba(237, 244, 240, 0.8);
+  --text-3: rgba(231, 240, 235, 0.58);
+
+  /* every token-driven surface becomes translucent glass */
+  --surface: rgb(255 255 255 / calc(0.13 - var(--liquid) * 0.08));
+  --surface-2: rgb(255 255 255 / calc(0.12 - var(--liquid) * 0.05));
+  --surface-3: rgb(255 255 255 / calc(0.24 - var(--liquid) * 0.05));
+  --line: rgb(255 255 255 / calc(0.17 + var(--liquid) * 0.13));
+  --line-2: rgb(255 255 255 / calc(0.24 + var(--liquid) * 0.12));
+  --hairline: rgb(255 255 255 / 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 6px 18px -6px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 10px 24px rgba(0, 0, 0, 0.5), 0 30px 60px -24px rgba(0, 0, 0, 0.7);
+
+  /* glass knobs, all driven by the slider */
+  --glass-blur: calc(8px + var(--liquid) * 24px);
+  --glass-sat: calc(1.05 + var(--liquid) * 0.85);
+  --glass-rim: rgb(255 255 255 / calc(0.25 + var(--liquid) * 0.25));
+  --glass-sheen: rgb(255 255 255 / calc(0.1 + var(--liquid) * 0.16));
+  --glass-pane: rgb(255 255 255 / calc(0.12 - var(--liquid) * 0.06));
+}
+
+/* --- the etched-topo backdrop: quiet structure for the glass to frost --- */
+:root.glass body { background: var(--page); }
+:root.glass .screen { background: var(--page); }
+:root.glass .screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* one restrained brand glow + a faint answering one */
+    radial-gradient(58% 44% at 84% -4%, rgba(47, 189, 118, 0.17), transparent 70%),
+    radial-gradient(46% 38% at -6% 102%, rgba(47, 189, 118, 0.1), transparent 70%),
+    /* fine topographic contours — offset ring systems, barely-there */
+    repeating-radial-gradient(circle at 78% 16%, transparent 0 34px, rgba(255, 255, 255, 0.05) 34px 35.5px),
+    repeating-radial-gradient(circle at 10% 80%, transparent 0 47px, rgba(255, 255, 255, 0.04) 47px 48.5px),
+    repeating-radial-gradient(circle at 50% 46%, transparent 0 64px, rgba(47, 189, 118, 0.045) 64px 65.5px);
+}
+/* content scrolls over the etched backdrop, not over an opaque page */
+:root.glass .view { background: transparent; }
+
+/* --- refraction: frosted panes blur whatever sits behind them --- */
+:root.glass .card,
+:root.glass .group,
+:root.glass .rem,
+:root.glass .seg,
+:root.glass .search,
+:root.glass .bigfield,
+:root.glass .cat,
+:root.glass .chip,
+:root.glass .iconbtn,
+:root.glass .map-fab,
+:root.glass .locating-pill,
+:root.glass .sheet,
+:root.glass .map-sheet,
+:root.glass .tabbar,
+:root.glass .toast {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
+
+/* --- big panes: rim + sheen --- */
+:root.glass .map-sheet,
+:root.glass .sheet {
+  background: var(--glass-pane);
+  border-top: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-pop);
+}
+:root.glass .map-sheet::before,
+:root.glass .sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(115deg, var(--glass-sheen) 0%, transparent 30%);
+}
+:root.glass .tabbar {
+  background: var(--glass-pane);
+  border-color: var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-pop);
+}
+:root.glass .tab-lens {
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), 0 4px 14px -4px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(10px) saturate(1.7);
+  backdrop-filter: blur(10px) saturate(1.7);
+}
+:root.glass .card,
+:root.glass .group,
+:root.glass .rem,
+:root.glass .cat {
+  border-color: var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-card);
+}
+
+/* --- smaller floating chrome --- */
+:root.glass .search { border-color: var(--glass-rim); }
+:root.glass .search.elevated { background: var(--glass-pane); border: 1px solid var(--glass-rim); }
+:root.glass .map-fab { background: var(--glass-pane); color: var(--text); border: 1px solid var(--glass-rim); }
+:root.glass .locating-pill { background: var(--glass-pane); border: 1px solid var(--glass-rim); }
+:root.glass .toast {
+  background: var(--glass-pane);
+  color: var(--text);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-pop);
+}
+:root.glass .seg button.on { background: rgb(255 255 255 / 0.18); color: var(--text); }
+:root.glass .scrim { background: rgba(2, 6, 10, 0.55); }
+
+/* --- proximity ping banner: brand-tinted glass --- */
+:root.glass .ping-banner {
+  background: rgb(47 189 118 / calc(0.9 - var(--liquid) * 0.3));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid rgb(255 255 255 / 0.35);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), var(--shadow-pop);
+  color: #ffffff;
+}
+
+/* --- map under glass: dark-inverted tiles (same trick as dark mode) --- */
+:root.glass .leaflet-host,
+:root.glass .minimap,
+:root.glass .leaflet-container { background: #0f1411; }
+:root.glass .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.9); }
+:root.glass .leaflet-host .leaflet-control-attribution { background: rgba(16, 21, 27, 0.7) !important; color: var(--text-3) !important; }
+:root.glass .leaflet-host .leaflet-control-attribution a { color: var(--text-2) !important; }
+:root.glass .mappin { background: #18202a; border-color: rgb(255 255 255 / 0.28); color: #cdd6df; }
+:root.glass .mappin.live { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+:root.glass .storedot { background: #18202a; }
+:root.glass .cat.on .cat-ico { background: rgb(255 255 255 / 0.9); }
+:root.glass .notif-dot { border-color: #18202a; }
+
+/* no backdrop-filter support → solid-ish panes so text stays readable */
+@supports not (backdrop-filter: blur(1px)) {
+  :root.glass {
+    --glass-pane: rgb(22 29 36 / 0.96);
+    --surface: rgb(255 255 255 / 0.08);
+    --surface-2: rgb(255 255 255 / 0.1);
+    --surface-3: rgb(255 255 255 / 0.16);
+  }
+}
+
+/* the user asked the OS for less transparency — give them calm solids */
+@media (prefers-reduced-transparency: reduce) {
+  :root.glass {
+    --glass-pane: #161d24;
+    --surface: #161d24;
+    --surface-2: #20282f;
+    --surface-3: #2a333c;
+  }
+  :root.glass .screen::before { content: none; }
+  :root.glass .view { background: var(--page); }
+  :root.glass .card,
+  :root.glass .group,
+  :root.glass .rem,
+  :root.glass .seg,
+  :root.glass .search,
+  :root.glass .bigfield,
+  :root.glass .cat,
+  :root.glass .chip,
+  :root.glass .iconbtn,
+  :root.glass .map-fab,
+  :root.glass .locating-pill,
+  :root.glass .sheet,
+  :root.glass .map-sheet,
+  :root.glass .tabbar,
+  :root.glass .toast,
+  :root.glass .ping-banner {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root.glass .ping-banner { background: var(--brand); }
+}
+
+

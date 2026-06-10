@@ -52,7 +52,7 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Appearance</div>
         <div className="seg">
-          {(["system", "light", "dark"] as const).map((t) => (
+          {(["system", "light", "dark", "glass"] as const).map((t) => (
             <button
               key={t}
               className={settings.theme === t ? "on" : ""}
@@ -63,6 +63,26 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
             </button>
           ))}
         </div>
+
+        {settings.theme === "glass" && (
+          <div className="group" style={{ marginTop: 12 }}>
+            <div className="row" style={{ cursor: "default", display: "block" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                <span className="row-title">Liquidness</span>
+                <span className="dim" style={{ fontSize: 13, fontWeight: 700 }}>{settings.liquid}%</span>
+              </div>
+              <input
+                type="range"
+                className="slider"
+                min={0}
+                max={100}
+                value={settings.liquid}
+                onChange={(e) => setSettings({ ...settings, liquid: Number(e.target.value) })}
+                aria-label="Liquidness"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Location</div>
         <div className="group">
