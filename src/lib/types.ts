@@ -56,6 +56,8 @@ export type ThemePref = "system" | "light" | "dark";
 export interface Settings {
   name: string;
   theme: ThemePref;
+  glass: boolean;        // liquid-glass surfaces (composes with light/dark)
+  liquid: number;        // glass intensity 0..100
   always: boolean;
   precise: boolean;
   sound: boolean;

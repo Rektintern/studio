@@ -9,7 +9,7 @@ interface SettingsProps {
   onReplayOnboarding: () => void;
 }
 
-type ToggleKey = "always" | "precise" | "sound" | "haptic" | "quiet";
+type ToggleKey = "always" | "precise" | "sound" | "haptic" | "quiet" | "glass";
 
 export function Settings({ settings, setSettings, onReplayOnboarding }: SettingsProps) {
   const toggle = (k: ToggleKey) => setSettings({ ...settings, [k]: !settings[k] });
@@ -62,6 +62,34 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
               {t}
             </button>
           ))}
+        </div>
+
+        <div className="group" style={{ marginTop: 12 }}>
+          <div className="row" style={{ cursor: "default" }}>
+            <div className="row-ico" style={{ color: settings.glass ? "var(--brand)" : undefined }}><Icon name="layers" size={18} /></div>
+            <div className="row-main">
+              <div className="row-title">Liquid glass</div>
+              <div className="row-sub">Frosted, see-through surfaces</div>
+            </div>
+            <Sw k="glass" />
+          </div>
+          {settings.glass && (
+            <div className="row" style={{ cursor: "default", display: "block" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                <span className="row-title">Liquidness</span>
+                <span className="dim" style={{ fontSize: 13, fontWeight: 700 }}>{settings.liquid}%</span>
+              </div>
+              <input
+                type="range"
+                className="slider"
+                min={0}
+                max={100}
+                value={settings.liquid}
+                onChange={(e) => setSettings({ ...settings, liquid: Number(e.target.value) })}
+                aria-label="Liquidness"
+              />
+            </div>
+          )}
         </div>
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Location</div>

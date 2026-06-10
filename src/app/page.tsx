@@ -80,6 +80,13 @@ export default function Home() {
     }
   }, [settings.theme]);
 
+  // Liquid glass: toggle the class and feed the intensity to CSS as --liquid (0..1).
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.toggle("glass", settings.glass);
+    el.style.setProperty("--liquid", String((settings.liquid ?? 55) / 100));
+  }, [settings.glass, settings.liquid]);
+
   const activeCats = useMemo<CategoryKey[]>(
     () => Array.from(new Set(reminders.filter((r) => r.enabled).map((r) => r.cat))),
     [reminders]
