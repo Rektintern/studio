@@ -22,7 +22,6 @@ import { RouteView } from "@/components/near/RouteView";
 import { PinLocationView } from "@/components/near/PinLocationView";
 import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
-import { GlassBackdrop } from "@/components/near/GlassBackdrop";
 import { TabBar, type TabId } from "@/components/near/TabBar";
 import { Toast } from "@/components/near/Toast";
 import { PingBanner } from "@/components/near/PingBanner";
@@ -163,7 +162,6 @@ export default function Home() {
 
   return (
     <div className="screen">
-      {settings.theme === "glass" && <GlassBackdrop location={location} />}
       {!onboarded ? (
         <Onboarding userLocation={location} onDone={finishOnboarding} />
       ) : pinning ? (
