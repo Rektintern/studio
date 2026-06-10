@@ -510,7 +510,9 @@
   /* every token-driven surface is clear white glass over the bright map */
   --surface: rgb(255 255 255 / calc(0.55 - var(--liquid) * 0.3));
   --surface-2: rgb(255 255 255 / calc(0.45 - var(--liquid) * 0.18));
-  --surface-3: rgb(255 255 255 / calc(0.6 - var(--liquid) * 0.2));
+  /* tracks & wells (slider, switches, dots, grab handle): dark-alpha —
+     white-alpha controls disappear against bright glass panes */
+  --surface-3: rgb(13 22 31 / calc(0.15 + var(--liquid) * 0.05));
   --line: rgb(255 255 255 / calc(0.55 + var(--liquid) * 0.25));
   --line-2: rgb(13 22 31 / 0.14);
   --hairline: rgb(13 22 31 / 0.1);
