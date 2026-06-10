@@ -9,7 +9,7 @@ interface SettingsProps {
   onReplayOnboarding: () => void;
 }
 
-type ToggleKey = "always" | "precise" | "sound" | "haptic" | "quiet" | "glass";
+type ToggleKey = "always" | "precise" | "sound" | "haptic" | "quiet";
 
 export function Settings({ settings, setSettings, onReplayOnboarding }: SettingsProps) {
   const toggle = (k: ToggleKey) => setSettings({ ...settings, [k]: !settings[k] });
@@ -52,7 +52,7 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Appearance</div>
         <div className="seg">
-          {(["system", "light", "dark"] as const).map((t) => (
+          {(["system", "light", "dark", "glass"] as const).map((t) => (
             <button
               key={t}
               className={settings.theme === t ? "on" : ""}
@@ -64,16 +64,8 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
           ))}
         </div>
 
-        <div className="group" style={{ marginTop: 12 }}>
-          <div className="row" style={{ cursor: "default" }}>
-            <div className="row-ico" style={{ color: settings.glass ? "var(--brand)" : undefined }}><Icon name="layers" size={18} /></div>
-            <div className="row-main">
-              <div className="row-title">Liquid glass</div>
-              <div className="row-sub">Frosted, see-through surfaces</div>
-            </div>
-            <Sw k="glass" />
-          </div>
-          {settings.glass && (
+        {settings.theme === "glass" && (
+          <div className="group" style={{ marginTop: 12 }}>
             <div className="row" style={{ cursor: "default", display: "block" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
                 <span className="row-title">Liquidness</span>
@@ -89,8 +81,8 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
                 aria-label="Liquidness"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Location</div>
         <div className="group">

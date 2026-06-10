@@ -65,27 +65,24 @@ export default function Home() {
     });
   }, [permissionStatus]);
 
-  // Apply the chosen theme; follow the OS when set to "system".
+  // Apply the chosen theme (glass is its own mode); follow the OS for "system".
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
+      const isGlass = settings.theme === "glass";
       const isDark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
-      document.documentElement.classList.toggle("dark", isDark);
+      const el = document.documentElement;
+      el.classList.toggle("glass", isGlass);
+      el.classList.toggle("dark", isDark && !isGlass);
+      el.style.setProperty("--liquid", String((settings.liquid ?? 55) / 100));
     };
     apply();
     if (settings.theme === "system") {
       mq.addEventListener("change", apply);
       return () => mq.removeEventListener("change", apply);
     }
-  }, [settings.theme]);
-
-  // Liquid glass: toggle the class and feed the intensity to CSS as --liquid (0..1).
-  useEffect(() => {
-    const el = document.documentElement;
-    el.classList.toggle("glass", settings.glass);
-    el.style.setProperty("--liquid", String((settings.liquid ?? 55) / 100));
-  }, [settings.glass, settings.liquid]);
+  }, [settings.theme, settings.liquid]);
 
   const activeCats = useMemo<CategoryKey[]>(
     () => Array.from(new Set(reminders.filter((r) => r.enabled).map((r) => r.cat))),

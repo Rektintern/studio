@@ -51,13 +51,12 @@ export interface DecoratedReminder extends Reminder {
   inRange: boolean;      // enabled && nearest within radius
 }
 
-export type ThemePref = "system" | "light" | "dark";
+export type ThemePref = "system" | "light" | "dark" | "glass";
 
 export interface Settings {
   name: string;
   theme: ThemePref;
-  glass: boolean;        // liquid-glass surfaces (composes with light/dark)
-  liquid: number;        // glass intensity 0..100
+  liquid: number;        // glass-theme intensity 0..100
   always: boolean;
   precise: boolean;
   sound: boolean;

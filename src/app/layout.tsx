@@ -35,7 +35,7 @@ export default function RootLayout({
         {/* Apply the saved theme before paint to avoid a flash. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var s=JSON.parse(localStorage.getItem('nr_settings')||'{}');var t=s.theme||'system';var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var e=document.documentElement;if(d)e.classList.add('dark');if(s.glass)e.classList.add('glass');e.style.setProperty('--liquid',String((s.liquid==null?55:s.liquid)/100));}catch(e){}`,
+            __html: `try{var s=JSON.parse(localStorage.getItem('nr_settings')||'{}');var t=s.theme||'system';var e=document.documentElement;if(t==='glass'){e.classList.add('glass');}else if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){e.classList.add('dark');}e.style.setProperty('--liquid',String((s.liquid==null?55:s.liquid)/100));}catch(e){}`,
           }}
         />
       </head>
