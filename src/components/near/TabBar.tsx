@@ -50,13 +50,18 @@ export function TabBar({ tab, setTab }: TabBarProps) {
   const onPointerDown = (e: React.PointerEvent) => {
     if (!barRef.current) return;
     startRef.current = { x: barX(e), moved: false };
-    try { barRef.current.setPointerCapture(e.pointerId); } catch {}
+    // NOTE: do NOT capture here — pointer capture swallows the buttons'
+    // click events, which would break plain taps. Capture starts only
+    // once the gesture becomes a real drag (below).
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const start = startRef.current;
     if (!start || !barRef.current) return;
     const x = barX(e);
-    if (!start.moved && Math.abs(x - start.x) > 6) start.moved = true;
+    if (!start.moved && Math.abs(x - start.x) > 6) {
+      start.moved = true;
+      try { barRef.current.setPointerCapture(e.pointerId); } catch {}
+    }
     if (start.moved) setDragX(Math.min(barRef.current.clientWidth, Math.max(0, x)));
   };
   const endDrag = (e: React.PointerEvent) => {
