@@ -201,6 +201,7 @@ export default function Home() {
               locationError={locationError}
               onEnableLocation={() => { requestNotifyPermission(); refreshLocation(); }}
               onPinLocation={() => setPinning(true)}
+              onPickLocation={(loc) => { setManualLocation(loc); setPingReset((n) => n + 1); showToast(`Location set — ${loc.address || "pinned"}`); }}
             />
           )}
           {tab === "feed" && (
