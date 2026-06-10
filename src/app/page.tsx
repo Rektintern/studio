@@ -199,6 +199,7 @@ export default function Home() {
               onOpen={(r) => setDetailId(r.id)}
               locating={locating}
               locationError={locationError}
+              locationDenied={permissionStatus === "denied" || locationError === "Location access denied."}
               onEnableLocation={() => { requestNotifyPermission(); refreshLocation(); }}
               onPinLocation={() => setPinning(true)}
             />
