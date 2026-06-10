@@ -5,10 +5,12 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { ReminderRow } from "./ReminderRow";
 import { NotifyCta } from "./NotifyCta";
+import { LocationBlockedHelp } from "./LocationBlockedHelp";
 import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
 import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
+import { searchPlaces, type GeoResult } from "@/lib/geocode";
 import type { CategoryKey, DecoratedReminder, Location } from "@/lib/types";
 
 const FALLBACK: [number, number] = [20.5937, 78.9629]; // India centroid, used until GPS arrives
@@ -24,9 +26,11 @@ interface MapScreenProps {
   locationError?: string | null;
   onEnableLocation?: () => void;
   onPinLocation?: () => void;
+  onPickLocation?: (loc: Location) => void;
+  locationDenied?: boolean;
 }
 
-export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, locating, locationError, onEnableLocation, onPinLocation }: MapScreenProps) {
+export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, locating, locationError, onEnableLocation, onPinLocation, onPickLocation, locationDenied }: MapScreenProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
@@ -39,6 +43,37 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
     ? [userLocation.latitude, userLocation.longitude]
     : null;
   const live = reminders.filter((r) => r.inRange);
+
+  // search a place → drop your location there (debounced, free Photon geocoder)
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onSearchChange = (v: string) => {
+    setQuery(v);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (v.trim().length < 2) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      const r = await searchPlaces(v);
+      setResults(r);
+      setSearching(false);
+    }, 350);
+  };
+
+  const pickSearchResult = (r: GeoResult) => {
+    setQuery("");
+    setResults([]);
+    setSearching(false);
+    didCenter.current = true;
+    mapRef.current?.flyTo([r.lat, r.lon], 15, { duration: 0.8 });
+    onPickLocation?.({ latitude: r.lat, longitude: r.lon, address: r.label });
+  };
+
+  const onSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && results.length > 0) pickSearchResult(results[0]);
+  };
 
   // init map once
   useEffect(() => {
@@ -205,20 +240,63 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
     <div className="view route" style={{ overflow: "hidden", inset: 0, background: "#e8eaed" }}>
       <div ref={elRef} className="leaflet-host" />
 
-      {/* top search bar */}
+      {/* top search bar — type a place to drop your location there */}
       <div
         style={{
           position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 14px)",
-          left: 16, right: 16, display: "flex", gap: 10, zIndex: 500,
+          left: 16, right: 16, zIndex: 520,
         }}
       >
-        <div className="search elevated" style={{ flex: 1, height: 50 }}>
-          <Icon name="search" size={19} style={{ color: "var(--text-3)" }} />
-          <input placeholder="Search places & reminders" />
+        <div style={{ display: "flex", gap: 10 }}>
+          <div className="search elevated" style={{ flex: 1, height: 50 }}>
+            <Icon name="search" size={19} style={{ color: "var(--text-3)" }} />
+            <input
+              value={query}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={onSearchKeyDown}
+              placeholder="Search a place to set your location"
+              autoComplete="off"
+              aria-label="Search a place"
+            />
+            {query && (
+              <button
+                onClick={() => onSearchChange("")}
+                aria-label="Clear search"
+                style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "grid", placeItems: "center", color: "var(--text-3)", flexShrink: 0 }}
+              >
+                <Icon name="close" size={16} />
+              </button>
+            )}
+          </div>
+          <button className="map-fab" style={{ width: 50, height: 50, borderRadius: 16 }} onClick={onPinLocation} aria-label="Set location on map">
+            <Icon name="pin" size={20} />
+          </button>
         </div>
-        <button className="map-fab" style={{ width: 50, height: 50, borderRadius: 16 }} onClick={onPinLocation} aria-label="Set location on map">
-          <Icon name="pin" size={20} />
-        </button>
+
+        {query.trim().length >= 2 && (
+          <div
+            style={{
+              marginTop: 8, background: "var(--surface)", border: "1px solid var(--line)",
+              borderRadius: 16, boxShadow: "var(--shadow-pop)", overflow: "hidden",
+              maxHeight: "42vh", overflowY: "auto",
+            }}
+          >
+            {searching ? (
+              <div className="dim" style={{ padding: "14px 16px", fontSize: 14 }}>Searching…</div>
+            ) : results.length > 0 ? (
+              results.map((r, i) => (
+                <button key={i} className="row" onClick={() => pickSearchResult(r)} style={{ width: "100%" }}>
+                  <div className="row-ico"><Icon name="pin" size={16} /></div>
+                  <div className="row-main">
+                    <div className="row-title" style={{ fontSize: 14, whiteSpace: "normal", lineHeight: 1.3 }}>{r.label}</div>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="dim" style={{ padding: "14px 16px", fontSize: 14 }}>No places found for “{query.trim()}”</div>
+            )}
+          </div>
+        )}
       </div>
 
       <button
@@ -272,14 +350,18 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
             )}
           </div>
           {!userLocation && !locating ? (
-            <div style={{ padding: "2px 0 8px" }}>
-              <div className="dim" style={{ fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 }}>
-                {locationError || "Turn on location so we can ping you near your reminders."}
+            locationDenied ? (
+              <LocationBlockedHelp onRetry={onEnableLocation} />
+            ) : (
+              <div style={{ padding: "2px 0 8px" }}>
+                <div className="dim" style={{ fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 }}>
+                  {locationError || "Turn on location so we can ping you near your reminders."}
+                </div>
+                <button className="btn btn-accent" style={{ height: 46, padding: "0 18px" }} onClick={onEnableLocation}>
+                  <Icon name="location" size={18} /> Enable location
+                </button>
               </div>
-              <button className="btn btn-accent" style={{ height: 46, padding: "0 18px" }} onClick={onEnableLocation}>
-                <Icon name="location" size={18} /> Enable location
-              </button>
-            </div>
+            )
           ) : live.length === 0 ? (
             <div className="dim" style={{ fontSize: 14, padding: "8px 0" }}>
               {userLocation ? "Nothing nearby — you're all clear." : "Locating…"}
