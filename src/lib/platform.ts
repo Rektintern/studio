@@ -8,6 +8,11 @@ export function isIOS(): boolean {
   return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
 }
 
+export function isAndroid(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent || "");
+}
+
 /** Running as an installed Home Screen app (standalone) rather than a browser tab. */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;

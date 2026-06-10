@@ -2,7 +2,7 @@
 
 import { type CSSProperties } from "react";
 import { Icon } from "./Icon";
-import { isIOS, isStandalone } from "@/lib/platform";
+import { isAndroid, isIOS, isStandalone } from "@/lib/platform";
 
 /**
  * Shown when location permission is denied. A web app CANNOT open the OS
@@ -12,6 +12,7 @@ import { isIOS, isStandalone } from "@/lib/platform";
  */
 export function LocationBlockedHelp({ onRetry }: { onRetry?: () => void }) {
   const ios = isIOS();
+  const android = isAndroid();
   const standalone = isStandalone();
 
   const steps = ios
@@ -23,11 +24,23 @@ export function LocationBlockedHelp({ onRetry }: { onRetry?: () => void }) {
           : "Find Safari → Location → 'While Using the App', then reload this page",
         "Still nothing? Remove this app from your Home Screen, add it again, and tap Allow when it asks",
       ]
-    : [
-        "Tap the lock / ⓘ icon next to the web address",
-        "Open Site settings → Location",
-        "Set it to Allow, then reload the page",
-      ];
+    : android
+      ? standalone
+        ? [
+            "Press and hold the NEAR REMIND icon on your home screen",
+            "Tap App info (ⓘ) → Permissions → Location",
+            "Choose 'Allow only while using the app', then reopen NEAR REMIND",
+          ]
+        : [
+            "Tap the lock / tune icon to the left of the web address",
+            "Tap Permissions → Location → Allow",
+            "Reload the page (and check Location is on in Quick Settings)",
+          ]
+      : [
+          "Tap the lock / ⓘ icon next to the web address",
+          "Open Site settings → Location",
+          "Set it to Allow, then reload the page",
+        ];
 
   return (
     <div style={{ padding: "2px 0 8px" }}>
@@ -36,8 +49,8 @@ export function LocationBlockedHelp({ onRetry }: { onRetry?: () => void }) {
         <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>Location is turned off</div>
       </div>
       <div className="dim" style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-        {ios
-          ? "iPhone won't let an app open Settings for you, so you'll need to switch it on yourself:"
+        {ios || android
+          ? "An app can't open your phone's Settings for you, so you'll need to switch it on yourself:"
           : "Your browser is blocking location for this site — here's how to allow it:"}
       </div>
       <ol style={list}>
