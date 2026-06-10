@@ -410,8 +410,21 @@
 .store-dot-wrap { background: none !important; border: none !important; }
 .storedot { display: block; width: 13px; height: 13px; border-radius: 50%; background: var(--surface); border: 2.5px solid var(--brand); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
 
-/* map bottom sheet (peeking) */
-.map-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl); background: var(--app-bg); box-shadow: 0 -8px 28px -12px rgba(28, 33, 40, 0.22); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
+/* map bottom sheet (peeking) — draggable between expanded and collapsed */
+.map-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
+  border-top-left-radius: var(--r-xl); border-top-right-radius: var(--r-xl);
+  background: var(--app-bg); box-shadow: 0 -8px 28px -12px rgba(28, 33, 40, 0.22);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  transition: transform .5s cubic-bezier(.2, 1.25, .3, 1); /* springy snap */
+  will-change: transform; touch-action: none;
+}
+/* collapsed = only the grab handle + header peek above the tab bar */
+.map-sheet.collapsed { transform: translateY(calc(100% - 58px - (env(safe-area-inset-bottom, 0px) + 92px))); }
+/* generous hit target around the little handle; also tappable to toggle */
+.grab-zone { width: 100%; background: none; border: none; padding: 10px 0 6px; display: grid; place-items: center; cursor: grab; }
+.grab-zone:active { cursor: grabbing; }
+.grab-zone .sheet-grab { margin: 0; }
 
 /* floating round map button */
 .map-fab { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--text); box-shadow: var(--shadow-card); cursor: pointer; transition: transform .14s; border: none; }

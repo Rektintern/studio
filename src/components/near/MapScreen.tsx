@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { ReminderRow } from "./ReminderRow";
@@ -165,6 +165,42 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
     if (mapRef.current && userPos) mapRef.current.flyTo(userPos, 15, { duration: 0.8 });
   };
 
+  // --- draggable bottom sheet: expanded <-> peek ---
+  // pointer-capture starts only once the gesture is a real vertical drag, so
+  // taps on buttons inside the sheet keep working (same trick as the tab lens)
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const sheetStart = useRef<{ y: number; base: number; moved: boolean } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [sheetY, setSheetY] = useState<number | null>(null); // live px while dragging
+
+  const sheetMaxShift = () => {
+    const el = sheetRef.current;
+    if (!el) return 0;
+    const padBottom = parseFloat(getComputedStyle(el).paddingBottom) || 92; // safe-area + 92
+    return Math.max(0, el.offsetHeight - 58 - padBottom); // peek: 58px above the tab bar
+  };
+  const onSheetDown = (e: React.PointerEvent) => {
+    sheetStart.current = { y: e.clientY, base: collapsed ? sheetMaxShift() : 0, moved: false };
+  };
+  const onSheetMove = (e: React.PointerEvent) => {
+    const s = sheetStart.current;
+    if (!s || !sheetRef.current) return;
+    const dy = e.clientY - s.y;
+    if (!s.moved && Math.abs(dy) > 8) {
+      s.moved = true;
+      try { sheetRef.current.setPointerCapture(e.pointerId); } catch {}
+    }
+    if (s.moved) setSheetY(Math.min(sheetMaxShift(), Math.max(0, s.base + dy)));
+  };
+  const endSheetDrag = (e: React.PointerEvent) => {
+    const s = sheetStart.current;
+    sheetStart.current = null;
+    setSheetY(null);
+    if (!s?.moved) return;
+    const pos = Math.min(sheetMaxShift(), Math.max(0, s.base + (e.clientY - s.y)));
+    setCollapsed(pos > sheetMaxShift() / 2); // snap to the nearer state
+  };
+
   return (
     <div className="view route" style={{ overflow: "hidden", inset: 0, background: "#e8eaed" }}>
       <div ref={elRef} className="leaflet-host" />
@@ -201,9 +237,23 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
         </div>
       )}
 
-      {/* peeking bottom sheet */}
-      <div className="map-sheet" style={{ zIndex: 500 }}>
-        <div className="sheet-grab" />
+      {/* peeking bottom sheet — drag the handle (or anywhere) down to collapse */}
+      <div
+        ref={sheetRef}
+        className={"map-sheet" + (collapsed ? " collapsed" : "")}
+        style={{ zIndex: 500, ...(sheetY !== null ? { transform: `translateY(${sheetY}px)`, transition: "none" } : {}) }}
+        onPointerDown={onSheetDown}
+        onPointerMove={onSheetMove}
+        onPointerUp={endSheetDrag}
+        onPointerCancel={endSheetDrag}
+      >
+        <button
+          className="grab-zone"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Expand sheet" : "Collapse sheet"}
+        >
+          <span className="sheet-grab" />
+        </button>
         <div style={{ padding: "6px 20px 24px" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
             <div className="h2" style={{ fontSize: 19 }}>In range now</div>
