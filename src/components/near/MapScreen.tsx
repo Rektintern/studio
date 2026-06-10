@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { ReminderRow } from "./ReminderRow";
 import { NotifyCta } from "./NotifyCta";
+import { LocationBlockedHelp } from "./LocationBlockedHelp";
 import { CATEGORIES } from "@/lib/categories";
 import { pinSvg } from "@/lib/pin-svg";
 import { tileUrl } from "@/lib/tiles";
@@ -26,9 +27,10 @@ interface MapScreenProps {
   onEnableLocation?: () => void;
   onPinLocation?: () => void;
   onPickLocation?: (loc: Location) => void;
+  locationDenied?: boolean;
 }
 
-export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, locating, locationError, onEnableLocation, onPinLocation, onPickLocation }: MapScreenProps) {
+export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, locating, locationError, onEnableLocation, onPinLocation, onPickLocation, locationDenied }: MapScreenProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const Lref = useRef<any>(null);
@@ -348,14 +350,18 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
             )}
           </div>
           {!userLocation && !locating ? (
-            <div style={{ padding: "2px 0 8px" }}>
-              <div className="dim" style={{ fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 }}>
-                {locationError || "Turn on location so we can ping you near your reminders."}
+            locationDenied ? (
+              <LocationBlockedHelp onRetry={onEnableLocation} />
+            ) : (
+              <div style={{ padding: "2px 0 8px" }}>
+                <div className="dim" style={{ fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 }}>
+                  {locationError || "Turn on location so we can ping you near your reminders."}
+                </div>
+                <button className="btn btn-accent" style={{ height: 46, padding: "0 18px" }} onClick={onEnableLocation}>
+                  <Icon name="location" size={18} /> Enable location
+                </button>
               </div>
-              <button className="btn btn-accent" style={{ height: 46, padding: "0 18px" }} onClick={onEnableLocation}>
-                <Icon name="location" size={18} /> Enable location
-              </button>
-            </div>
+            )
           ) : live.length === 0 ? (
             <div className="dim" style={{ fontSize: 14, padding: "8px 0" }}>
               {userLocation ? "Nothing nearby — you're all clear." : "Locating…"}
