@@ -19,7 +19,11 @@ const PATHS: Record<string, ReactNode> = {
   feed: (<><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" /></>),
   map: (<><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" /><path d="M9 4v14M15 6v14" /></>),
   plus: (<><path d="M12 5v14M5 12h14" /></>),
-  settings: (<><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.8 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 13.9H4a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5.6 6.8l-.1-.1A2 2 0 1 1 8.3 3.9l.1.1a1.6 1.6 0 0 0 1.8.3H10A1.6 1.6 0 0 0 11 2.6V2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.4 1H22a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></>),
+  // Lucide gear fills its whole 24-box and sits a touch high/off-centre, so it
+  // looked bigger + skewed next to the lighter map/home glyphs. Scale it to the
+  // others' ~16px height and re-centre on (12,12); non-scaling-stroke keeps the
+  // line weight identical to the rest.
+  settings: (<g transform="translate(12 12) scale(0.7) translate(-13 -11.5)"><circle cx="12" cy="12" r="3.2" vectorEffect="non-scaling-stroke" /><path vectorEffect="non-scaling-stroke" d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.8 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4 13.9H4a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5.6 6.8l-.1-.1A2 2 0 1 1 8.3 3.9l.1.1a1.6 1.6 0 0 0 1.8.3H10A1.6 1.6 0 0 0 11 2.6V2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.4 1H22a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" /></g>),
   search: (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>),
   filter: (<><path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z" /></>),
   bell: (<><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>),
