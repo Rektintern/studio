@@ -5,6 +5,12 @@ import { LocationProvider } from "@/components/location-provider";
 export const metadata: Metadata = {
   title: 'NEAR REMIND — Reminders that know where you are',
   description: "Save an errand once — we'll nudge you the moment you're close to the right kind of place.",
+  // iOS reads the Home Screen name from this (not from <title>, which it truncates)
+  appleWebApp: {
+    capable: true,
+    title: 'NEAR REMIND',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {
