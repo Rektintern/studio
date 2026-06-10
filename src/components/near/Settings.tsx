@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon } from "./Icon";
+import { Seg } from "./Seg";
 import type { Settings as SettingsType } from "@/lib/types";
 
 interface SettingsProps {
@@ -51,18 +52,11 @@ export function Settings({ settings, setSettings, onReplayOnboarding }: Settings
         </div>
 
         <div className="section-label" style={{ margin: "26px 2px 12px" }}>Appearance</div>
-        <div className="seg">
-          {(["system", "light", "dark", "glass"] as const).map((t) => (
-            <button
-              key={t}
-              className={settings.theme === t ? "on" : ""}
-              onClick={() => setSettings({ ...settings, theme: t })}
-              style={{ textTransform: "capitalize" }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <Seg
+          options={(["system", "light", "dark", "glass"] as const).map((t) => ({ value: t, label: t }))}
+          value={settings.theme}
+          onChange={(t) => setSettings({ ...settings, theme: t })}
+        />
 
         {settings.theme === "glass" && (
           <div className="group" style={{ marginTop: 12 }}>

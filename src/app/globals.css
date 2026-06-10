@@ -323,6 +323,21 @@
 .seg button { flex: 1; border: none; cursor: pointer; padding: 9px 12px; border-radius: 100px; background: transparent; color: var(--text-2); font-family: var(--font-ui); font-size: 13px; font-weight: 700; transition: all .15s; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 
+/* lens-driven seg (Seg component): the pill is a separate sliding element,
+   draggable across the options exactly like the tab-bar lens */
+.seg.has-lens { position: relative; touch-action: none; }
+.seg.has-lens > button { position: relative; z-index: 1; }
+.seg.has-lens button.on { background: transparent; box-shadow: none; }
+.seg.has-lens button.lensed { color: var(--text); }
+.seg-lens {
+  position: absolute; top: 4px; bottom: 4px; left: 4px;
+  border-radius: 100px; z-index: 0; pointer-events: none;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform .42s cubic-bezier(.2, 1.5, .3, 1); /* springy snap */
+  will-change: transform;
+}
+
 /* list group (settings) */
 .group { border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
 .row { display: flex; align-items: center; gap: 14px; padding: 15px 16px; cursor: pointer; transition: background .15s; width: 100%; text-align: left; background: none; border: none; }
@@ -631,6 +646,12 @@
   box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-pop);
 }
 :root.glass .seg button.on { background: rgb(255 255 255 / 0.18); color: var(--text); }
+:root.glass .seg.has-lens button.on { background: transparent; }
+:root.glass .seg-lens {
+  background: rgb(255 255 255 / 0.18);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen);
+}
 :root.glass .scrim { background: rgba(2, 6, 10, 0.55); }
 
 /* --- proximity ping banner: brand-tinted glass --- */
