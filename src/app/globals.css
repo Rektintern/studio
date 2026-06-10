@@ -461,13 +461,12 @@
 /* ============================================================
    GLASS THEME — its own mode beside light/dark (NOT an overlay:
    glass over a flat white/dark page has nothing to refract, so
-   it never reads as glass). This theme paints a vivid, slowly
-   drifting aurora BEHIND everything and turns every surface into
-   a frosted white-alpha pane that blurs + refracts it — with a
-   specular rim and top sheen. On the map screen the live map is
-   the backdrop instead. Intensity comes in as --liquid (0..1)
-   from the Liquidness slider: more liquid = clearer panes, more
-   blur, juicier color behind, brighter rim.
+   it never reads as glass). The backdrop behind every screen is
+   the user's LIVE MAP (dimmed, non-interactive — GlassBackdrop),
+   and every surface becomes a frosted white-alpha pane that
+   blurs + refracts it, with a specular rim and top sheen.
+   Intensity comes in as --liquid (0..1) from the Liquidness
+   slider: more liquid = clearer panes, more blur, brighter rim.
    ============================================================ */
 :root {
   --liquid: 0.55; /* overwritten inline from settings before paint */
@@ -511,28 +510,28 @@
   --glass-pane: rgb(255 255 255 / calc(0.14 - var(--liquid) * 0.06));
 }
 
-/* --- the aurora: vivid color for the glass to refract --- */
+/* --- the backdrop: your LIVE MAP, dimmed, behind every screen ---
+   real content for the glass to refract (a non-interactive Leaflet
+   layer following the user's position; tiles dark via the same
+   inversion as the map screen) */
 :root.glass body { background: var(--page); }
 :root.glass .screen { background: var(--page); }
-:root.glass .screen::before {
-  content: "";
+.glass-backdrop {
   position: absolute;
-  inset: -25%;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(38% 34% at 16% 14%, rgba(58, 208, 134, 0.5), transparent 70%),
-    radial-gradient(44% 38% at 86% 16%, rgba(59, 130, 246, 0.42), transparent 70%),
-    radial-gradient(48% 42% at 80% 82%, rgba(167, 89, 247, 0.36), transparent 70%),
-    radial-gradient(36% 32% at 10% 88%, rgba(244, 162, 22, 0.3), transparent 72%),
-    radial-gradient(30% 26% at 50% 50%, rgba(34, 197, 160, 0.22), transparent 75%);
-  animation: nr-aurora 26s ease-in-out infinite alternate;
 }
-@keyframes nr-aurora {
-  from { transform: translate3d(-2.5%, -2%, 0) rotate(-1.5deg) scale(1.02); }
-  to { transform: translate3d(2.5%, 3%, 0) rotate(1.5deg) scale(1.16); }
+.glass-backdrop-map { position: absolute; inset: 0; }
+/* dim it down so panes + text stay readable */
+.glass-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 500; /* above leaflet panes */
+  background: rgba(7, 11, 16, 0.6);
 }
-/* content scrolls over the aurora, not over an opaque page */
+/* content scrolls over the map backdrop, not over an opaque page */
 :root.glass .view { background: transparent; }
 
 /* --- refraction: frosted panes blur whatever sits behind them --- */
@@ -639,7 +638,7 @@
     --surface-2: #20282f;
     --surface-3: #2a333c;
   }
-  :root.glass .screen::before { content: none; }
+  :root.glass .glass-backdrop { display: none; }
   :root.glass .view { background: var(--page); }
   :root.glass .card,
   :root.glass .group,
@@ -663,8 +662,4 @@
   :root.glass .ping-banner { background: var(--brand); }
 }
 
-/* respect reduced motion: aurora holds still */
-@media (prefers-reduced-motion: reduce) {
-  :root.glass .screen::before { animation: none; }
-}
 
