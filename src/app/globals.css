@@ -226,6 +226,7 @@
   background: rgba(255, 255, 255, 0.86); border: 1px solid var(--line);
   backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
   box-shadow: var(--shadow-pop); padding: 0 8px;
+  position: relative; touch-action: none; /* lens drag must not scroll the page */
 }
 .tab {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -233,9 +234,25 @@
   font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.01em; font-weight: 700;
   transition: color .15s ease; height: 100%; justify-content: center;
   background: none; border: none;
+  position: relative; z-index: 1; /* above the sliding lens */
 }
 .tab.active { color: var(--brand); }
-.tab svg { width: 23px; height: 23px; }
+.tab svg { width: 23px; height: 23px; transition: transform .18s ease; }
+
+/* the liquid lens: parks on the active tab, follows the finger on press-drag */
+.tab-lens {
+  position: absolute; left: 8px; top: 7px; bottom: 7px;
+  width: calc((100% - 16px) / 3);
+  border-radius: 16px; z-index: 0; pointer-events: none;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  transition: transform .42s cubic-bezier(.2, 1.5, .3, 1); /* springy snap */
+  will-change: transform;
+}
+.tab-lens.drag { box-shadow: var(--shadow-card); }
+.tab.lensed { color: var(--text); }
+.tab.lensed svg { transform: scale(1.18) translateY(-1px); }
+.dark .tab-lens { background: var(--surface-3); }
 .tab-add .add-btn {
   width: 48px; height: 48px; border-radius: 16px;
   background: var(--brand); color: var(--brand-ink);
@@ -491,8 +508,8 @@
   --text-3: rgba(228, 236, 243, 0.5);
 
   /* every token-driven surface becomes translucent glass */
-  --surface: rgb(255 255 255 / calc(0.15 - var(--liquid) * 0.07));
-  --surface-2: rgb(255 255 255 / calc(0.13 - var(--liquid) * 0.04));
+  --surface: rgb(255 255 255 / calc(0.13 - var(--liquid) * 0.08));
+  --surface-2: rgb(255 255 255 / calc(0.12 - var(--liquid) * 0.05));
   --surface-3: rgb(255 255 255 / calc(0.22 - var(--liquid) * 0.05));
   --line: rgb(255 255 255 / calc(0.17 + var(--liquid) * 0.13));
   --line-2: rgb(255 255 255 / calc(0.24 + var(--liquid) * 0.12));
@@ -507,7 +524,7 @@
   --glass-sat: calc(1.05 + var(--liquid) * 0.85);
   --glass-rim: rgb(255 255 255 / calc(0.25 + var(--liquid) * 0.25));
   --glass-sheen: rgb(255 255 255 / calc(0.1 + var(--liquid) * 0.16));
-  --glass-pane: rgb(255 255 255 / calc(0.14 - var(--liquid) * 0.06));
+  --glass-pane: rgb(255 255 255 / calc(0.12 - var(--liquid) * 0.07));
 }
 
 /* --- the backdrop: your LIVE MAP, dimmed, behind every screen ---
@@ -523,13 +540,13 @@
   pointer-events: none;
 }
 .glass-backdrop-map { position: absolute; inset: 0; }
-/* dim it down so panes + text stay readable */
+/* dim scales DOWN with liquidness: more liquid = more map glowing through */
 .glass-backdrop::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 500; /* above leaflet panes */
-  background: rgba(7, 11, 16, 0.6);
+  background: rgba(7, 11, 16, calc(0.52 - var(--liquid) * 0.24));
 }
 /* content scrolls over the map backdrop, not over an opaque page */
 :root.glass .view { background: transparent; }
@@ -575,6 +592,13 @@
   border-color: var(--glass-rim);
   box-shadow: inset 0 1px 0 var(--glass-sheen), var(--shadow-pop);
 }
+:root.glass .tab-lens {
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-sheen), 0 4px 14px -4px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(10px) saturate(1.7);
+  backdrop-filter: blur(10px) saturate(1.7);
+}
 :root.glass .card,
 :root.glass .group,
 :root.glass .rem,
@@ -612,6 +636,8 @@
 :root.glass .minimap,
 :root.glass .leaflet-container { background: #10151b; }
 :root.glass .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.9); }
+/* the backdrop map runs juicier than the real map — it's scenery for the glass */
+:root.glass .glass-backdrop .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(1.08) contrast(0.92) saturate(1.35); }
 :root.glass .leaflet-host .leaflet-control-attribution { background: rgba(16, 21, 27, 0.7) !important; color: var(--text-3) !important; }
 :root.glass .leaflet-host .leaflet-control-attribution a { color: var(--text-2) !important; }
 :root.glass .mappin { background: #18202a; border-color: rgb(255 255 255 / 0.28); color: #cdd6df; }
