@@ -69,6 +69,10 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
     onPickLocation?.({ latitude: r.lat, longitude: r.lon, address: r.label });
   };
 
+  const onSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && results.length > 0) pickSearchResult(results[0]);
+  };
+
   // init map once
   useEffect(() => {
     let cancelled = false;
@@ -247,6 +251,7 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
             <input
               value={query}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={onSearchKeyDown}
               placeholder="Search a place to set your location"
               autoComplete="off"
               aria-label="Search a place"
@@ -266,7 +271,7 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
           </button>
         </div>
 
-        {query.trim().length >= 2 && (results.length > 0 || searching) && (
+        {query.trim().length >= 2 && (
           <div
             style={{
               marginTop: 8, background: "var(--surface)", border: "1px solid var(--line)",
@@ -274,9 +279,9 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
               maxHeight: "42vh", overflowY: "auto",
             }}
           >
-            {searching && results.length === 0 ? (
+            {searching ? (
               <div className="dim" style={{ padding: "14px 16px", fontSize: 14 }}>Searching…</div>
-            ) : (
+            ) : results.length > 0 ? (
               results.map((r, i) => (
                 <button key={i} className="row" onClick={() => pickSearchResult(r)} style={{ width: "100%" }}>
                   <div className="row-ico"><Icon name="pin" size={16} /></div>
@@ -285,6 +290,8 @@ export function MapScreen({ userLocation, reminders, nearbyStores = [], onOpen, 
                   </div>
                 </button>
               ))
+            ) : (
+              <div className="dim" style={{ padding: "14px 16px", fontSize: 14 }}>No places found for “{query.trim()}”</div>
             )}
           </div>
         )}
