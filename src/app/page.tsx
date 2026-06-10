@@ -202,6 +202,7 @@ export default function Home() {
               locationDenied={permissionStatus === "denied" || locationError === "Location access denied."}
               onEnableLocation={() => { requestNotifyPermission(); refreshLocation(); }}
               onPinLocation={() => setPinning(true)}
+              onPickLocation={(loc) => { setManualLocation(loc); setPingReset((n) => n + 1); showToast(`Location set — ${loc.address || "pinned"}`); }}
             />
           )}
           {tab === "feed" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { MiniMap } from "./MiniMap";
 import { Seg } from "./Seg";
@@ -43,11 +43,43 @@ export function AddFlow({ userLocation, onClose, onCreate }: AddFlowProps) {
   const next = () => (step < 2 ? setStep(step + 1) : finish());
   const back = () => (step > 0 ? setStep(step - 1) : onClose());
 
+  // drag the grab handle down to dismiss the sheet (capture starts on real drag
+  // so it never fights the buttons; release past ~120px closes, else snaps back)
+  const dragStart = useRef<{ y: number; moved: boolean } | null>(null);
+  const [dragY, setDragY] = useState<number | null>(null);
+  const onGrabDown = (e: React.PointerEvent) => { dragStart.current = { y: e.clientY, moved: false }; };
+  const onGrabMove = (e: React.PointerEvent) => {
+    const s = dragStart.current;
+    if (!s) return;
+    const dy = e.clientY - s.y;
+    if (!s.moved && dy > 6) { s.moved = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch {} }
+    if (s.moved) setDragY(Math.max(0, dy));
+  };
+  const onGrabUp = () => {
+    const s = dragStart.current;
+    const dy = dragY ?? 0;
+    dragStart.current = null;
+    setDragY(null);
+    if (s?.moved && dy > 120) onClose();
+  };
+
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <div className="sheet" style={{ maxHeight: "92%", display: "flex", flexDirection: "column" }}>
-        <div className="sheet-grab" />
+      <div
+        className="sheet"
+        style={{ maxHeight: "92%", display: "flex", flexDirection: "column", ...(dragY !== null ? { transform: `translateY(${dragY}px)`, transition: "none" } : {}) }}
+      >
+        <div
+          className="grab-zone"
+          onPointerDown={onGrabDown}
+          onPointerMove={onGrabMove}
+          onPointerUp={onGrabUp}
+          onPointerCancel={onGrabUp}
+          aria-label="Drag down to close"
+        >
+          <span className="sheet-grab" />
+        </div>
         <div style={{ padding: "8px 24px 16px", overflowY: "auto", flex: 1, minHeight: 0 }}>
           {/* header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>

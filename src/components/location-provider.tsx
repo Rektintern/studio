@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { Location } from "@/lib/types";
 import { calculateDistance } from "@/lib/geo";
 
+const MANUAL_KEY = "nr_manualloc";
+
 interface LocationContextType {
   location: Location | null;
   error: string | null;
@@ -23,22 +25,19 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | "loading">("loading");
   const [isLoading, setIsLoading] = useState(true);
 
-  const lastGeocoded = useRef<{ lat: number; lon: number; time: number } | null>(null);
+  // Refs keep these callbacks STABLE so the init effect runs exactly once.
+  // (Previously fetchReverseGeocode depended on location.address → applyPosition
+  // and refresh changed on every pin → the init effect re-ran and clobbered the
+  // manual location. That was the "stuck on one spot" bug.)
+  const lastGeocoded = useRef<{ lat: number; lon: number; time: number; label: string } | null>(null);
   const isManualRef = useRef(false);
-
-  const setManualLocation = (loc: Location) => {
-    isManualRef.current = true;
-    setIsManual(true);
-    setLocation(loc);
-    setIsLoading(false);
-  };
 
   const fetchReverseGeocode = useCallback(async (lat: number, lon: number): Promise<string> => {
     // Reuse the last label if we've barely moved (keeps the free geocoder happy).
     if (lastGeocoded.current) {
       const dist = calculateDistance(lat, lon, lastGeocoded.current.lat, lastGeocoded.current.lon);
       if (dist < 60 && Date.now() - lastGeocoded.current.time < 45000) {
-        return location?.address || "Near you";
+        return lastGeocoded.current.label;
       }
     }
     try {
@@ -47,21 +46,22 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       );
       const data = await res.json();
       if (data) {
-        lastGeocoded.current = { lat, lon, time: Date.now() };
         const parts = Array.from(
           new Set([data.locality, data.city, data.principalSubdivision, data.countryCode])
         ).filter(Boolean);
-        return parts.slice(0, 2).join(", ") || "Near you";
+        const label = parts.slice(0, 2).join(", ") || "Near you";
+        lastGeocoded.current = { lat, lon, time: Date.now(), label };
+        return label;
       }
     } catch {
       // ignore — label is cosmetic
     }
     return "Near you";
-  }, [location?.address]);
+  }, []);
 
   const applyPosition = useCallback(
     async (position: GeolocationPosition) => {
-      if (isManualRef.current) return;
+      if (isManualRef.current) return; // a deliberate manual pin wins over GPS
       const address = await fetchReverseGeocode(position.coords.latitude, position.coords.longitude);
       setLocation({
         latitude: position.coords.latitude,
@@ -74,7 +74,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     [fetchReverseGeocode]
   );
 
-  const refresh = useCallback(() => {
+  // Ask the browser for the real GPS fix (does NOT touch manual state).
+  const locateViaGps = useCallback(() => {
     if (typeof window === "undefined" || !navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
       setIsLoading(false);
@@ -95,26 +96,47 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     );
   }, [applyPosition]);
 
+  // Manual pin: from the "Set on map" flow or the search bar. Persisted so it
+  // survives reloads, and flagged so GPS won't override it.
+  const setManualLocation = useCallback((loc: Location) => {
+    isManualRef.current = true;
+    setIsManual(true);
+    setLocation(loc);
+    setError(null);
+    setIsLoading(false);
+    try { localStorage.setItem(MANUAL_KEY, JSON.stringify(loc)); } catch { /* ignore */ }
+  }, []);
+
+  // "Use my real location" — clears the manual pin and re-fetches GPS.
+  const refresh = useCallback(() => {
+    isManualRef.current = false;
+    setIsManual(false);
+    try { localStorage.removeItem(MANUAL_KEY); } catch { /* ignore */ }
+    setIsLoading(true);
+    locateViaGps();
+  }, [locateViaGps]);
+
   useEffect(() => {
-    // Optional manual-location override (handy as a "fake GPS" for demos/testing).
-    // Set localStorage "nr_devloc" to {latitude, longitude, address}. Real GPS still
-    // takes over when available; normal users never set this key.
+    // Restore a previously pinned manual location (wins over GPS until cleared).
+    let hasManual = false;
     try {
-      const dev = localStorage.getItem("nr_devloc");
-      if (dev) {
-        const d = JSON.parse(dev);
+      const saved = localStorage.getItem(MANUAL_KEY);
+      if (saved) {
+        const d = JSON.parse(saved);
         if (typeof d?.latitude === "number" && typeof d?.longitude === "number") {
+          isManualRef.current = true;
+          setIsManual(true);
           setLocation({ latitude: d.latitude, longitude: d.longitude, address: d.address });
           setIsLoading(false);
+          hasManual = true;
         }
       }
     } catch {
-      // ignore malformed override
+      // ignore malformed value
     }
 
-    // NOTE: notification permission is requested from a user gesture instead
-    // (see requestNotifyPermission) — auto-requesting on load is ignored by
-    // mobile browsers. Here we only register the SW that shows the pings.
+    // Register the SW that shows mobile pings (notification permission is
+    // requested from a user gesture elsewhere, not here).
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
@@ -122,17 +144,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     if (navigator.permissions?.query) {
       navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
         setPermissionStatus(result.state);
-        result.onchange = () => {
-          setPermissionStatus(result.state);
-          if (result.state === "granted") {
-            isManualRef.current = false;
-            setIsManual(false);
-          }
-        };
+        result.onchange = () => setPermissionStatus(result.state);
       });
     }
 
-    refresh();
+    // Only auto-locate via GPS when the user hasn't pinned a spot themselves.
+    if (!hasManual) locateViaGps();
+
+    // Keep watching GPS; applyPosition no-ops while a manual pin is active.
     const watchId = navigator.geolocation?.watchPosition(
       applyPosition,
       (err) => {
@@ -144,7 +163,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [refresh, applyPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run ONCE — callbacks are stable, so nothing re-triggers this
 
   return (
     <LocationContext.Provider
