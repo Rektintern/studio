@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "./Icon";
 import { MiniMap } from "./MiniMap";
+import { Seg } from "./Seg";
 import { CATEGORIES, CATEGORY_KEYS } from "@/lib/categories";
 import { fmtDist } from "@/lib/geo";
 import type { CategoryKey, Location, Reminder, TriggerMode } from "@/lib/types";
@@ -133,10 +134,15 @@ export function AddFlow({ userLocation, onClose, onCreate }: AddFlowProps) {
                 </div>
 
                 <div className="section-label" style={{ margin: "22px 0 10px" }}>PING ME WHEN</div>
-                <div className="seg">
-                  <button className={trigger === "arriving" ? "on" : ""} onClick={() => setTrigger("arriving")}>Arriving</button>
-                  <button className={trigger === "nearby" ? "on" : ""} onClick={() => setTrigger("nearby")}>Anytime nearby</button>
-                </div>
+                <Seg
+                  options={[
+                    { value: "arriving" as TriggerMode, label: "Arriving" },
+                    { value: "nearby" as TriggerMode, label: "Anytime nearby" },
+                  ]}
+                  value={trigger}
+                  onChange={setTrigger}
+                  capitalize={false}
+                />
               </div>
             )}
           </div>
