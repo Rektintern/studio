@@ -215,9 +215,12 @@ export default function Home() {
       {onboarded && !detail && !routePlace && !pinning && (
         <>
           <TabBar tab={tab} setTab={setTab} />
-          <button className="add-fab" onClick={() => setAdding(true)} aria-label="New reminder">
-            <Icon name="plus" size={26} stroke={2.6} />
-          </button>
+          {/* "New reminder" belongs on Map & Saved — not over the Settings rows */}
+          {tab !== "settings" && (
+            <button className="add-fab" onClick={() => setAdding(true)} aria-label="New reminder">
+              <Icon name="plus" size={26} stroke={2.6} />
+            </button>
+          )}
         </>
       )}
       {adding && <AddFlow userLocation={location} onClose={() => setAdding(false)} onCreate={createReminder} />}
