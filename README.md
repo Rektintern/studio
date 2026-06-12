@@ -5,7 +5,8 @@ prescription") tied to a **type of place** — and the app pings you the moment 
 place that matches, like catching it as you walk past.
 
 Built with **Next.js 15 + React 19 + Tailwind**, a live **Leaflet + OpenStreetMap** map, and
-**OpenStreetMap Overpass** for finding nearby places — **all free, no API keys**.
+**Google Places** for finding nearby places, with **OpenStreetMap Overpass** as a free,
+key-free fallback.
 
 ## Run it
 
@@ -16,6 +17,22 @@ npm run dev          # http://localhost:9002
 
 Allow location when prompted (needs HTTPS or localhost). The app finds real shops around you
 and shows distances + in-range pings live.
+
+### Better place coverage (Google Places key)
+Nearby search uses **Google Places (New)** as its primary source — it returns many more
+places than OSM, especially in residential areas. It's optional: with no key the app falls
+back to free OpenStreetMap (works, but coverage is thinner).
+
+To enable it, create a `.env.local` with a [Google Places API](https://developers.google.com/maps/documentation/places/web-service/op-overview)
+key (enable the **Places API (New)** on your Google Cloud project):
+
+```bash
+GOOGLE_PLACES_API_KEY=your-key-here
+```
+
+The key is read **server-side only** (never shipped to the browser) by `/api/nearby`. For
+production on Firebase App Hosting, store it as a [secret](https://firebase.google.com/docs/app-hosting/configure#secret-parameters)
+rather than committing it. Restrict the key to the Places API in Google Cloud to cap spend.
 
 ### Testing without moving (fake GPS)
 Headless browsers / desktops have no GPS. Drop a pin manually from the console:

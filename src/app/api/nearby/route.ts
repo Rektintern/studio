@@ -1,12 +1,12 @@
 // Server-side "nearby places" lookup.
 //
-// Default source is the free OpenStreetMap Overpass API (proxied here so the
-// browser never gets CORS-blocked 503s from the public mirrors). OSM coverage
-// is rich in mapped hubs but thin in many residential areas — so when a
-// GOOGLE_PLACES_API_KEY is configured AND OSM comes back thin, we top up the
-// results with Google Places (New). That keeps dense areas free (OSM only) and
-// spends Google calls only where they're actually needed. Without a key, this
-// behaves exactly as before (OSM only). The key is read server-side only.
+// Primary source is Google Places (New) when GOOGLE_PLACES_API_KEY is set — it
+// returns far more places than OSM, especially in residential areas. The free
+// OpenStreetMap Overpass API (proxied here so the browser never gets
+// CORS-blocked 503s from the public mirrors) is the fallback: it tops up the
+// results when Google comes back thin, and is the sole source when no key is
+// configured (so the app still works key-free for contributors). The key is
+// read server-side only.
 
 import { NextResponse } from "next/server";
 import { CATEGORIES, CATEGORY_KEYS } from "@/lib/categories";
@@ -23,7 +23,8 @@ const ENDPOINTS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 const REQUEST_TIMEOUT = 11000;
-// Below this many OSM hits we consider the area "thin" and top up with Google.
+// Below this many hits from the primary source we consider the area "thin" and
+// fill the rest in from the fallback source.
 const THIN_RESULTS = 10;
 
 async function postOverpass(url: string, body: string): Promise<unknown> {
@@ -133,28 +134,41 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "bad params" }, { status: 400 });
   }
 
-  let osm: Place[] = [];
-  let osmFailed = false;
-  try {
-    osm = await fetchOSM(cat, lat, lon, radius);
-  } catch {
-    osmFailed = true;
-  }
-
-  // Top up with Google when OSM is thin or down — but only if a key is set.
-  let places = osm;
+  // Google Places (New) is the primary source when a key is configured; free
+  // OSM fills gaps when Google is thin and is the sole source when no key is set.
   const hasKey = !!process.env.GOOGLE_PLACES_API_KEY;
-  if (hasKey && osm.length < THIN_RESULTS) {
-    try {
-      places = mergeDedupe(osm, await fetchGoogle(cat, lat, lon, radius));
-    } catch {
-      // Google hiccup — keep whatever OSM gave us.
-    }
-  }
+  let places: Place[];
 
-  // Only error out when we have genuinely nothing AND OSM failed AND no key saved us.
-  if (places.length === 0 && osmFailed && !hasKey) {
-    return NextResponse.json({ error: "all upstream sources unavailable" }, { status: 502 });
+  if (hasKey) {
+    let google: Place[] = [];
+    let googleFailed = false;
+    try {
+      google = await fetchGoogle(cat, lat, lon, radius);
+    } catch {
+      googleFailed = true;
+    }
+    // Top up with free OSM only when Google is thin or down — keeps the happy
+    // path to a single fast call and fills gaps when Google has little.
+    if (google.length < THIN_RESULTS) {
+      try {
+        places = mergeDedupe(google, await fetchOSM(cat, lat, lon, radius));
+      } catch {
+        places = google; // OSM hiccup — keep whatever Google gave us.
+      }
+    } else {
+      places = google;
+    }
+    // Genuinely nothing and Google itself errored → both sources are down.
+    if (places.length === 0 && googleFailed) {
+      return NextResponse.json({ error: "all upstream sources unavailable" }, { status: 502 });
+    }
+  } else {
+    // No key — free OSM only (original behavior).
+    try {
+      places = await fetchOSM(cat, lat, lon, radius);
+    } catch {
+      return NextResponse.json({ error: "all upstream sources unavailable" }, { status: 502 });
+    }
   }
 
   places = places.sort((a, b) => a.dist - b.dist).slice(0, 24);
