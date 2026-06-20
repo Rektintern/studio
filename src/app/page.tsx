@@ -20,6 +20,7 @@ import { Feed } from "@/components/near/Feed";
 import { ReminderDetail } from "@/components/near/ReminderDetail";
 import { RouteView } from "@/components/near/RouteView";
 import { PinLocationView } from "@/components/near/PinLocationView";
+import { RegionGate } from "@/components/near/RegionGate";
 import { AddFlow } from "@/components/near/AddFlow";
 import { Settings } from "@/components/near/Settings";
 import { TabBar, type TabId } from "@/components/near/TabBar";
@@ -29,7 +30,7 @@ import { Icon } from "@/components/near/Icon";
 import type { CategoryKey, DecoratedReminder, Place, Reminder, Settings as SettingsType } from "@/lib/types";
 
 export default function Home() {
-  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation, setManualLocation } = useLocation();
+  const { location, permissionStatus, error: locationError, isLoading: locating, refresh: refreshLocation, setManualLocation, countryName, regionSupported } = useLocation();
 
   const [hydrated, setHydrated] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
@@ -170,6 +171,12 @@ export default function Home() {
           onConfirm={(loc) => { setManualLocation(loc); setPinning(false); setPingReset((n) => n + 1); }}
           onClose={() => setPinning(false)}
         />
+      ) : regionSupported === false ? (
+        <RegionGate
+          countryName={countryName}
+          onChooseLocation={() => setPinning(true)}
+          onRetry={refreshLocation}
+        />
       ) : routePlace ? (
         <RouteView
           userLocation={location}
@@ -214,7 +221,7 @@ export default function Home() {
         </>
       )}
 
-      {onboarded && !detail && !routePlace && !pinning && (
+      {onboarded && !detail && !routePlace && !pinning && regionSupported !== false && (
         <>
           <TabBar tab={tab} setTab={setTab} />
           {/* "New reminder" belongs on Map & Saved — not over the Settings rows */}

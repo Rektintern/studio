@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { Location } from "@/lib/types";
 import { calculateDistance } from "@/lib/geo";
+import { reverseGeocode } from "@/lib/geocode";
+import { isSupportedCountry } from "@/lib/region";
 
 const MANUAL_KEY = "nr_manualloc";
 
@@ -14,6 +16,12 @@ interface LocationContextType {
   refresh: () => void;
   setManualLocation: (loc: Location) => void;
   isManual: boolean;
+  /** ISO 3166-1 alpha-2 code of the effective location (GPS or manual pin), once resolved. */
+  countryCode: string | null;
+  /** Human-readable country name of the effective location, if known. */
+  countryName: string | null;
+  /** null while unknown/resolving (fail-open); false → outside the regions we serve. */
+  regionSupported: boolean | null;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -24,6 +32,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | "loading">("loading");
   const [isLoading, setIsLoading] = useState(true);
+  const [region, setRegion] = useState<{ code: string | null; name: string | null }>({ code: null, name: null });
 
   // Refs keep these callbacks STABLE so the init effect runs exactly once.
   // (Previously fetchReverseGeocode depended on location.address → applyPosition
@@ -40,23 +49,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         return lastGeocoded.current.label;
       }
     }
-    try {
-      const res = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-      );
-      const data = await res.json();
-      if (data) {
-        const parts = Array.from(
-          new Set([data.locality, data.city, data.principalSubdivision, data.countryCode])
-        ).filter(Boolean);
-        const label = parts.slice(0, 2).join(", ") || "Near you";
-        lastGeocoded.current = { lat, lon, time: Date.now(), label };
-        return label;
-      }
-    } catch {
-      // ignore — label is cosmetic
-    }
-    return "Near you";
+    const { label } = await reverseGeocode(lat, lon);
+    lastGeocoded.current = { lat, lon, time: Date.now(), label };
+    return label;
   }, []);
 
   const applyPosition = useCallback(
@@ -102,6 +97,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     isManualRef.current = true;
     setIsManual(true);
     setLocation(loc);
+    setRegion({ code: null, name: null }); // re-resolve for the new pin (avoids a stale gate flash)
     setError(null);
     setIsLoading(false);
     try { localStorage.setItem(MANUAL_KEY, JSON.stringify(loc)); } catch { /* ignore */ }
@@ -166,9 +162,31 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run ONCE — callbacks are stable, so nothing re-triggers this
 
+  // Resolve the country of the *effective* location (GPS fix or manual pin) so we
+  // can gate the app to the regions we serve. Keyed on the ~110 m cell to avoid
+  // re-resolving on GPS jitter; reverseGeocode() is cached, so this usually shares
+  // the address-label lookup's network call rather than adding one.
+  const lat3 = location ? location.latitude.toFixed(3) : null;
+  const lon3 = location ? location.longitude.toFixed(3) : null;
+  useEffect(() => {
+    if (lat3 == null || lon3 == null) return;
+    let cancelled = false;
+    reverseGeocode(Number(lat3), Number(lon3)).then((r) => {
+      if (!cancelled) setRegion({ code: r.countryCode, name: r.countryName });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lat3, lon3]);
+
   return (
     <LocationContext.Provider
-      value={{ location, error, permissionStatus, isLoading, refresh, setManualLocation, isManual }}
+      value={{
+        location, error, permissionStatus, isLoading, refresh, setManualLocation, isManual,
+        countryCode: region.code,
+        countryName: region.name,
+        regionSupported: region.code == null ? null : isSupportedCountry(region.code),
+      }}
     >
       {children}
     </LocationContext.Provider>
