@@ -7,8 +7,9 @@ import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
 import { searchPlaces, reverseGeocode, type GeoResult } from "@/lib/geocode";
 import type { Location } from "@/lib/types";
+import { DEFAULT_CENTER } from "@/lib/region";
 
-const FALLBACK: [number, number] = [20.5937, 78.9629];
+const FALLBACK = DEFAULT_CENTER;
 
 interface PinLocationViewProps {
   userLocation: Location | null;

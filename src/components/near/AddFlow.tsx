@@ -7,9 +7,10 @@ import { Seg } from "./Seg";
 import { CATEGORIES, CATEGORY_KEYS } from "@/lib/categories";
 import { fmtDist } from "@/lib/geo";
 import type { CategoryKey, Location, Reminder, TriggerMode } from "@/lib/types";
+import { DEFAULT_CENTER } from "@/lib/region";
 
 const QUICK_ITEMS = ["Dark chocolate", "Oat milk", "AA batteries", "Stamps", "Prescription", "Cash", "Coffee beans", "Light bulbs"];
-const FALLBACK: [number, number] = [20.5937, 78.9629];
+const FALLBACK = DEFAULT_CENTER;
 
 interface AddFlowProps {
   userLocation: Location | null;
