@@ -3,8 +3,9 @@
 import { Icon } from "./Icon";
 import { MiniMap } from "./MiniMap";
 import type { Location } from "@/lib/types";
+import { DEFAULT_CENTER } from "@/lib/region";
 
-const FALLBACK: [number, number] = [20.5937, 78.9629];
+const FALLBACK = DEFAULT_CENTER;
 
 interface OnboardingProps {
   userLocation: Location | null;

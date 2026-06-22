@@ -9,6 +9,14 @@ export const SUPPORTED_COUNTRIES = new Set(["GB", "US", "AU"]);
 /** Human-readable list of the regions we serve, for UI copy. */
 export const SUPPORTED_REGIONS_LABEL = "the UK, US, and Australia";
 
+/**
+ * Map center shown as a placeholder until a real location is known (GPS fix or
+ * manual pin). A populated spot in a supported country — New York — so the
+ * default view is never somewhere we don't serve. (Was the centroid of India,
+ * a leftover from early dev.)
+ */
+export const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
+
 /** True if an ISO 3166-1 alpha-2 country code is one we currently serve. */
 export function isSupportedCountry(code: string | null | undefined): boolean {
   return !!code && SUPPORTED_COUNTRIES.has(code.toUpperCase());

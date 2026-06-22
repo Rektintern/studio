@@ -12,8 +12,9 @@ import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
 import { searchPlaces, type GeoResult } from "@/lib/geocode";
 import type { CategoryKey, DecoratedReminder, Location } from "@/lib/types";
+import { DEFAULT_CENTER } from "@/lib/region";
 
-const FALLBACK: [number, number] = [20.5937, 78.9629]; // India centroid, used until GPS arrives
+const FALLBACK = DEFAULT_CENTER; // placeholder until GPS / manual pin resolves
 
 interface NearbyStore { id: string; lat: number; lon: number; name: string; cat: CategoryKey; }
 
