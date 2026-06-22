@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { Icon } from "./Icon";
 import { tileUrl } from "@/lib/tiles";
 import { useIsDark } from "@/hooks/use-is-dark";
-import { searchPlaces, type GeoResult } from "@/lib/geocode";
+import { searchPlaces, reverseGeocode, type GeoResult } from "@/lib/geocode";
 import type { Location } from "@/lib/types";
 
 const FALLBACK: [number, number] = [20.5937, 78.9629];
@@ -49,18 +49,10 @@ export function PinLocationView({ userLocation, onConfirm, onClose }: PinLocatio
     mapRef.current?.flyTo([r.lat, r.lon], 16, { duration: 0.8 });
   };
 
-  const reverseGeocode = async () => {
+  const resolveAddress = async () => {
     const [lat, lon] = centerRef.current;
-    try {
-      const res = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-      );
-      const d = await res.json();
-      const parts = Array.from(new Set([d.locality, d.city, d.principalSubdivision, d.countryCode])).filter(Boolean);
-      setAddress(parts.slice(0, 2).join(", ") || "Pinned location");
-    } catch {
-      setAddress("Pinned location");
-    }
+    const { label } = await reverseGeocode(lat, lon);
+    setAddress(label === "Near you" ? "Pinned location" : label);
   };
 
   useEffect(() => {
@@ -85,8 +77,8 @@ export function PinLocationView({ userLocation, onConfirm, onClose }: PinLocatio
         const c = map.getCenter();
         centerRef.current = [c.lat, c.lng];
       });
-      map.on("moveend", reverseGeocode);
-      reverseGeocode();
+      map.on("moveend", resolveAddress);
+      resolveAddress();
       setTimeout(() => mapRef.current && map.invalidateSize(), 60);
     })();
 
